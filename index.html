@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SSET</title>
+  <title>HexaShift Secure Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
   <script>
     const manifest = {
-      name: "SSET",
-      short_name: "SSET",
+      name: "HexaShift Secure Encryption Tool",
+      short_name: "HexaShift",
       start_url: ".",
       display: "standalone",
       background_color: "#ffffff",
@@ -122,7 +122,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 SSET</h2>
+    <h2>🔐 HexaShift Secure Encryption Tool</h2>
     <label for="action">Choose Action:</label>
     <select id="action">
       <option value="encrypt">Encrypt</option>
@@ -149,12 +149,10 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('togglePassword').addEventListener('change', function () {
-        const keyInput = document.getElementById('key');
-        keyInput.type = this.checked ? 'text' : 'password';
-      });
+      
 
       document.getElementById('runButton').addEventListener('click', async () => {
+        const enc = new TextEncoder();
         const action = document.getElementById('action').value;
         const message = document.getElementById('message').value;
         const keyInput = document.getElementById('key').value;
@@ -166,7 +164,7 @@
           if (keyInput.length < 6) throw new Error("Passphrase must be at least 6 characters.");
           const passphrase = keyInput.trim();
 
-          const enc = new TextEncoder();
+          
           const salt = crypto.getRandomValues(new Uint8Array(16));
           const iv = crypto.getRandomValues(new Uint8Array(12));
           const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
