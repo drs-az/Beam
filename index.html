@@ -132,12 +132,9 @@
     <label for="message">Message:</label>
     <textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
 
-    <label for="key">Enter your secure passphrase (6–20 characters recommended):</label>
+    <label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
     <input type="password" id="key" placeholder="e.g., 3,1,4,1,5,9 or a phrase" oninput="checkStrength()">
-    <div class="password-toggle">
-      <input type="checkbox" id="togglePassword">
-      <label for="togglePassword">Show passphrase</label>
-    </div>
+    
     <div id="strength"></div>
 
     <button id="runButton">Run</button>
