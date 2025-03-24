@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>HexaShift Secure Encryption Tool</title>
-  <link rel="icon" type="image/png" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg">
+  <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
+
+  <!-- Manifest injection -->
   <script>
     const manifest = {
       name: "HexaShift Secure Encryption Tool",
@@ -13,13 +15,11 @@
       display: "standalone",
       background_color: "#ffffff",
       theme_color: "#007bff",
-      icons: [
-        {
-          src: "https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg",
-          type: "image/png",
-          sizes: "512x512"
-        }
-      ]
+      icons: [{
+        src: "https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg",
+        type: "image/png",
+        sizes: "512x512"
+      }]
     };
     const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
     const manifestURL = URL.createObjectURL(blob);
@@ -28,9 +28,12 @@
     link.href = manifestURL;
     document.head.appendChild(link);
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+
+  <!-- Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/argon2-browser/dist/argon2.min.js" defer></script>
+
   <style>
     :root {
       --bg-color: #f9f9f9;
@@ -54,8 +57,6 @@
       color: var(--text-color);
     }
     .container {
-      max-width: 100%;
-      width: 100%;
       max-width: 500px;
       margin: auto;
       background: var(--container-bg);
@@ -111,16 +112,10 @@
     #strength {
       margin-top: 0.25rem;
       font-size: 0.9rem;
-      font-weight: normal;
     }
     #qrcode {
       margin-top: 1rem;
       text-align: center;
-    }
-    @media (max-width: 600px) {
-      body {
-        padding: 0.5rem;
-      }
     }
   </style>
 </head>
@@ -132,120 +127,125 @@
       <option value="encrypt">Encrypt</option>
       <option value="decrypt">Decrypt</option>
     </select>
+
     <label for="message">Message:</label>
     <textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
+
     <label for="key">6-Number Key (comma-separated):</label>
     <input type="text" id="key" placeholder="e.g., 3,1,4,1,5,9" oninput="checkStrength()">
     <div id="strength"></div>
+
     <button onclick="processMessage()">Run</button>
     <div class="tools">
       <button onclick="copyToClipboard()">📋 Copy Output</button>
       <button onclick="toggleDarkMode()">🌓 Toggle Dark Mode</button>
     </div>
+
     <div class="result" id="result"></div>
     <div id="qrcode"></div>
   </div>
+
   <script>
-    function checkStrength() {
-      const input = document.getElementById('key').value;
-      const result = zxcvbn(input);
-      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
-    }
-
-    async function deriveKey(passphrase, salt) {
-      const encoded = new TextEncoder().encode(passphrase);
-      const hash = await argon2.hash({
-        pass: encoded,
-        salt: salt,
-        type: argon2.ArgonType.Argon2id,
-        hashLen: 32,
-        time: 3,
-        mem: 65536,
-        parallelism: 1
-      });
-      return crypto.subtle.importKey(
-        "raw",
-        hash.hash,
-        { name: "AES-GCM" },
-        false,
-        ["encrypt", "decrypt"]
-      );
-    }
-
-    async function encryptData(message, passphrase) {
-      const enc = new TextEncoder();
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const key = await deriveKey(passphrase, salt);
-      const ciphertext = await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv: iv },
-        key,
-        enc.encode(message)
-      );
-      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-      return btoa(String.fromCharCode(...combined));
-    }
-
-    async function decryptData(base64Data, passphrase) {
-      const data = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      const salt = data.slice(0, 16);
-      const iv = data.slice(16, 28);
-      const ciphertext = data.slice(28);
-      const key = await deriveKey(passphrase, salt);
-      const decrypted = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv: iv },
-        key,
-        ciphertext
-      );
-      return new TextDecoder().decode(decrypted);
-    }
-
-    async function processMessage() {
-      const action = document.getElementById('action').value;
-      const message = document.getElementById('message').value;
-      const keyInput = document.getElementById('key').value;
-      const resultDiv = document.getElementById('result');
-      const qrCodeDiv = document.getElementById('qrcode');
-      qrCodeDiv.innerHTML = '';
-
-      try {
-        const numbers = keyInput.split(',').map(k => parseInt(k.trim()));
-        if (numbers.length !== 6 || numbers.some(isNaN)) {
-          throw new Error("Key must consist of exactly 6 numbers.");
-        }
-        const passphrase = numbers.join('-');
-
-        if (action === 'encrypt') {
-          const encrypted = await encryptData(message, passphrase);
-          resultDiv.textContent = `Encrypted Code:\n${encrypted}`;
-          QRCode.toCanvas(document.createElement('canvas'), passphrase, (err, canvas) => {
-            if (!err) qrCodeDiv.appendChild(canvas);
-          });
-        } else {
-          const decrypted = await decryptData(message, passphrase);
-          resultDiv.textContent = `Decrypted Message:\n${decrypted}`;
-        }
-      } catch (err) {
-        resultDiv.textContent = 'Error: ' + err.message;
+    window.addEventListener('load', () => {
+      function checkStrength() {
+        const input = document.getElementById('key').value;
+        const result = zxcvbn(input);
+        const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+        document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
       }
-    }
 
-    function copyToClipboard() {
-      const text = document.getElementById('result').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('Copied to clipboard!');
-      }).catch(err => {
-        alert('Failed to copy: ' + err);
-      });
-    }
+      async function deriveKey(passphrase, salt) {
+        const encoded = new TextEncoder().encode(passphrase);
+        const hash = await argon2.hash({
+          pass: encoded,
+          salt: salt,
+          type: argon2.ArgonType.Argon2id,
+          hashLen: 32,
+          time: 3,
+          mem: 65536,
+          parallelism: 1
+        });
+        return crypto.subtle.importKey(
+          "raw",
+          hash.hash,
+          { name: "AES-GCM" },
+          false,
+          ["encrypt", "decrypt"]
+        );
+      }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-    }
+      async function encryptData(message, passphrase) {
+        const enc = new TextEncoder();
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const salt = crypto.getRandomValues(new Uint8Array(16));
+        const key = await deriveKey(passphrase, salt);
+        const ciphertext = await crypto.subtle.encrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          enc.encode(message)
+        );
+        const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+        return btoa(String.fromCharCode(...combined));
+      }
 
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
+      async function decryptData(base64Data, passphrase) {
+        const data = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+        const salt = data.slice(0, 16);
+        const iv = data.slice(16, 28);
+        const ciphertext = data.slice(28);
+        const key = await deriveKey(passphrase, salt);
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-GCM", iv: iv },
+          key,
+          ciphertext
+        );
+        return new TextDecoder().decode(decrypted);
+      }
+
+      async function processMessage() {
+        const action = document.getElementById('action').value;
+        const message = document.getElementById('message').value;
+        const keyInput = document.getElementById('key').value;
+        const resultDiv = document.getElementById('result');
+        const qrCodeDiv = document.getElementById('qrcode');
+        qrCodeDiv.innerHTML = '';
+
+        try {
+          const numbers = keyInput.split(',').map(k => parseInt(k.trim()));
+          if (numbers.length !== 6 || numbers.some(isNaN)) {
+            throw new Error("Key must consist of exactly 6 numbers.");
+          }
+          const passphrase = numbers.join('-');
+
+          if (action === 'encrypt') {
+            const encrypted = await encryptData(message, passphrase);
+            resultDiv.textContent = `Encrypted Code:\n${encrypted}`;
+            QRCode.toCanvas(document.createElement('canvas'), passphrase, (err, canvas) => {
+              if (!err) qrCodeDiv.appendChild(canvas);
+            });
+          } else {
+            const decrypted = await decryptData(message, passphrase);
+            resultDiv.textContent = `Decrypted Message:\n${decrypted}`;
+          }
+        } catch (err) {
+          resultDiv.textContent = 'Error: ' + err.message;
+        }
+      }
+
+      function copyToClipboard() {
+        const text = document.getElementById('result').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          alert('Copied to clipboard!');
+        }).catch(err => {
+          alert('Failed to copy: ' + err);
+        });
+      }
+
+      function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+      }
+
+      if ('serviceWorker' in navigator) {
         const swCode = `
           self.addEventListener('install', event => self.skipWaiting());
           self.addEventListener('activate', event => self.clients.claim());
@@ -262,8 +262,8 @@
         navigator.serviceWorker.register(swURL)
           .then(reg => console.log('Service Worker registered:', reg))
           .catch(err => console.error('Service Worker registration failed:', err));
-      });
-    }
+      }
+    });
   </script>
 </body>
 </html>
