@@ -1,4 +1,3 @@
-<!-- Password visibility toggle added -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -29,6 +28,14 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      window.togglePasswordVisibility = function () {
+        const keyInput = document.getElementById('key');
+        keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+      }
+    });
+  </script>
   <style>
     :root {
       --bg-color: #f9f9f9;
@@ -136,7 +143,7 @@
     <label for="key">Enter your secure passphrase (6–20 characters recommended):</label>
     <input type="password" id="key" placeholder="e.g., 3,1,4,1,5,9 or a phrase" oninput="checkStrength()">
     <div class="password-toggle">
-      <input type="checkbox" id="togglePassword" onclick="togglePasswordVisibility()">
+      <input type="checkbox" id="togglePassword">
       <label for="togglePassword">Show passphrase</label>
     </div>
     <div id="strength"></div>
@@ -149,13 +156,13 @@
 
     <div class="result" id="result"></div>
     <div id="qrcode"></div>
-  </div>
 
-  <script>
-    function togglePasswordVisibility() {
-      const keyInput = document.getElementById('key');
-      keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
-    }
-  </script>
+    <script>
+      document.getElementById('togglePassword').addEventListener('change', function () {
+        const keyInput = document.getElementById('key');
+        keyInput.type = this.checked ? 'text' : 'password';
+      });
+    </script>
+  </div>
 </body>
 </html>
