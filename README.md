@@ -1,40 +1,45 @@
-# 🔐 SSET (PWA)
+# 🔐 STET (PWA)
 
-This is a secure, offline-capable, single-file encryption tool built as a Progressive Web App (PWA). It allows users to encrypt and decrypt messages using a custom 6-number key, with enhanced modern cryptography.
+STET is a secure, offline-capable encryption tool built as a single-page Progressive Web App (PWA). It enables simple, private message encryption and decryption using a custom passphrase.
 
 ## ✨ Features
 
 - AES-256-GCM encryption
-- Argon2id key derivation (stronger than PBKDF2)
-- 6-number custom passcode input (e.g., `3,1,4,1,5,9`)
-- Passphrase strength meter (via zxcvbn)
-- Optional QR code for sharing keys securely offline
+- PBKDF2 key derivation (150k iterations, SHA-256)
+- Custom passphrase input (numeric with commas or full alphanumeric)
+- Passphrase strength meter using zxcvbn
 - Offline-capable via Service Worker
-- PWA support: “Add to Home Screen” on Android and desktop
+- Copy-to-clipboard support
 - Dark mode toggle
-- Copy output to clipboard
+- Optional QR code for key sharing
+- Mobile-first design + installable as a web app (PWA)
+
+## 🔐 Passphrase Input
+
+You may use either:
+- Numeric sequences separated by commas (e.g. `3,1,4,1,5,9`)
+- Full alphanumeric passphrases (e.g. `correct horse battery staple`)
+
+> 📌 Commas are only required for numeric input. Alphanumeric phrases should be entered as plain text.
 
 ## 🚀 How to Use
 
-1. Open the app: [https://drs-az.github.io/SSET/](https://drs-az.github.io/SSET/)
-2. Enter your message and 6-number key
-3. Choose to **Encrypt** or **Decrypt**
-4. View result, copy it, or scan/share the key via QR code
-5. Tap “Add to Home Screen” to install it as an app
+1. Open the app (`index.html`) in a browser
+2. Choose to **Encrypt** or **Decrypt**
+3. Enter your message
+4. Enter your passphrase
+5. Click **Run**
+6. Copy the result or scan the key QR code (optional)
 
 ## 📱 PWA Support
 
 - Fully offline after first load
 - Installable on Android and desktop
-- Fullscreen experience with local storage only
+- Fullscreen experience with local-only processing
 
-## 🔐 Security Notes
+## ⚠️ Security Notes
 
-- Uses modern cryptographic algorithms (AES-256-GCM, Argon2id)
-- No data leaves your browser — all encryption happens client-side
-- QR code is local-only and never uploaded or transmitted
-- Does not implement forward secrecy (like Signal), but great for secure local/offline use
-
-## 📦 File Structure
-
-Everything is embedded in a single `index.html` file — no dependencies or backend required.
+- Encryption is handled completely in-browser
+- No data is transmitted or stored
+- Use a strong, unique passphrase for best protection
+- This tool does not implement forward secrecy
