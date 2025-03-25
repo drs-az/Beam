@@ -112,7 +112,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 SSET</h2>
+    <h2>🔐 Santos Secure Encryption Tool</h2>
 
     <label for="action">Choose Action:</label>
     <select id="action">
@@ -135,7 +135,7 @@
 
     <div class="tools">
       <button onclick="copyToClipboard()">📋 Copy Output</button>
-      <button onclick="toggleDarkMode()">🌓 Dark Mode</button>
+      <button id="darkModeBtn">🌓 Dark Mode</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -225,6 +225,7 @@
         .then(reg => console.log('Service Worker registered:', reg))
         .catch(err => console.error('Service Worker registration failed:', err));
     }
-  </script>
+  document.getElementById('darkModeBtn').addEventListener('click', toggleDarkMode);
+</script>
 </body>
 </html>
