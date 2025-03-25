@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Santos Secure Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
-  <!-- Manifest injection: single instance -->
   <script>
     if (!document.querySelector('link[rel="manifest"]')) {
       const manifest = {
@@ -113,7 +112,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 Santos Secure Encryption Tool</h2>
+    <h2>🔐 SSET</h2>
 
     <label for="action">Choose Action:</label>
     <select id="action">
@@ -136,7 +135,7 @@
 
     <div class="tools">
       <button onclick="copyToClipboard()">📋 Copy Output</button>
-      <button id="darkModeBtn">🌓 Dark Mode</button>
+      <button onclick="toggleDarkMode()">🌓 Dark Mode</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -226,7 +225,6 @@
         .then(reg => console.log('Service Worker registered:', reg))
         .catch(err => console.error('Service Worker registration failed:', err));
     }
-document.getElementById('darkModeBtn').addEventListener('click', toggleDarkMode);
   </script>
 </body>
 </html>
