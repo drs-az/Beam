@@ -1,6 +1,6 @@
-# 🔐 STET (PWA)
+# 🔐 SSET (PWA)
 
-STET is a secure, offline-capable encryption tool built as a single-page Progressive Web App (PWA). It enables simple, private message encryption and decryption using a custom passphrase.
+SSET is a secure, offline-capable encryption tool built as a single-page Progressive Web App (PWA). It enables simple, private message encryption and decryption using a custom passphrase.
 
 ## ✨ Features
 
