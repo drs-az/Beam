@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SSET</title>
+  <title>HexaShift Secure Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
   <script>
     const manifest = {
-      name: "SSET",
-      short_name: "SSET",
+      name: "HexaShift Secure Encryption Tool",
+      short_name: "HexaShift",
       start_url: ".",
       display: "standalone",
       background_color: "#ffffff",
@@ -122,7 +122,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 SSET</h2>
+    <h2>🔐 HexaShift Secure Encryption Tool</h2>
     <label for="action">Choose Action:</label>
     <select id="action">
       <option value="encrypt">Encrypt</option>
@@ -134,6 +134,9 @@
 
     <label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
     <input type="password" id="key" placeholder="e.g., 3,1,4,1,5,9 or a phrase" oninput="checkStrength()">
+    <div class="password-toggle">
+  <button type="button" onclick="togglePasswordVisibility()" aria-label="Toggle Passphrase Visibility">👁️</button>
+</div>
     
     <div id="strength"></div>
 
@@ -202,9 +205,15 @@
     }
 
     function copyToClipboard() {
-      const text = document.getElementById('result').textContent;
-      navigator.clipboard.writeText(text).then(() => {
-        alert('Copied to clipboard!');
+  const text = document.getElementById('result').textContent;
+  const cleaned = text.replace(/^Encrypted Code:
+?|^Decrypted Message:
+?/, '').trim();
+  navigator.clipboard.writeText(cleaned).then(() => {
+    alert('Copied to clipboard!');
+  }).catch(err => {
+    alert('Failed to copy: ' + err);
+  });
       }).catch(err => {
         alert('Failed to copy: ' + err);
       });
@@ -213,6 +222,14 @@
     function toggleDarkMode() {
       document.body.classList.toggle('dark-mode');
     }
-  </script>
+  document.getElementById('togglePassword').addEventListener('change', function () {
+  const keyInput = document.getElementById('key');
+  keyInput.type = this.checked ? 'text' : 'password';
+});
+function togglePasswordVisibility() {
+  const keyInput = document.getElementById('key');
+  keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
+}
+</script>
 </body>
 </html>
