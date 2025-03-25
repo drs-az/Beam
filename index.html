@@ -3,8 +3,8 @@
 <head>
   <script>
     const manifest = {
-      name: "🚨 CIA/NSA Messenger 🚨",
-      short_name: "CIA/NSA",
+      name: "Santos Secure Encryption Tool",
+      short_name: "SSET",
       start_url: ".",
       display: "standalone",
       background_color: "#ffffff",
@@ -24,8 +24,29 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🚨 CIA/NSA Messenger 🚨</title>
+  <title>Santos Secure Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
+  <script>
+    const manifest = {
+      name: "HexaShift Secure Encryption Tool",
+      short_name: "HexaShift",
+      start_url: ".",
+      display: "standalone",
+      background_color: "#ffffff",
+      theme_color: "#007bff",
+      icons: [{
+        src: "https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg",
+        type: "image/png",
+        sizes: "512x512"
+      }]
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestURL = URL.createObjectURL(blob);
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = manifestURL;
+    document.head.appendChild(link);
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
   <style>
@@ -87,12 +108,17 @@
       background-color: var(--button-hover);
     }
     .result {
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
+
       margin-top: 1.5rem;
       padding: 1rem;
       background: #f1f1f1;
       border-radius: 8px;
       word-wrap: break-word;
       font-weight: bold;
+    
     }
     .tools {
       display: flex;
@@ -122,7 +148,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>🔐 CIA/NSA Messenger</h2>
+    <h2>🔐 HexaShift Secure Encryption Tool</h2>
     <label for="action">Choose Action:</label>
     <select id="action">
       <option value="encrypt">Encrypt</option>
