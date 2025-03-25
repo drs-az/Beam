@@ -3,79 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Santos Secure Encryption Tool</title>
+  <title>Santos Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
   <style>
-    :root {
-      --bg-color: #f9f9f9;
-      --text-color: #000;
-      --container-bg: #fff;
-      --button-bg: #007bff;
-      --button-hover: #0056b3;
-    }
-    body.dark-mode {
-      --bg-color: #1e1e1e;
-      --text-color: #f9f9f9;
-      --container-bg: #2c2c2c;
-      --button-bg: #4a90e2;
-      --button-hover: #357ab8;
-    }
     body {
       font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #000;
       margin: 0;
       padding: 1rem;
-      background: var(--bg-color);
-      color: var(--text-color);
+    }
+    body.dark-mode {
+      background: #1e1e1e;
+      color: #f9f9f9;
     }
     .container {
       max-width: 500px;
       margin: auto;
-      background: var(--container-bg);
-      padding: 1rem;
+      background: #fff;
       border-radius: 12px;
+      padding: 1rem;
       box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     }
     h2 {
       text-align: center;
     }
     label {
+      font-weight: bold;
       display: block;
       margin-top: 1rem;
-      font-weight: bold;
     }
-    input, textarea, button, select {
+    input, textarea, select, button {
       width: 100%;
-      margin-top: 0.5rem;
       padding: 0.75rem;
+      margin-top: 0.5rem;
       font-size: 1rem;
       border: 1px solid #ccc;
       border-radius: 8px;
       box-sizing: border-box;
-      background: inherit;
-      color: inherit;
     }
     button {
-      background-color: var(--button-bg);
-      color: white;
+      background: #007bff;
+      color: #fff;
       border: none;
-      margin-top: 1rem;
+      cursor: pointer;
     }
     button:hover {
-      background-color: var(--button-hover);
+      background: #0056b3;
     }
     .result {
       margin-top: 1.5rem;
-      padding: 1rem;
       background: #f1f1f1;
+      padding: 1rem;
       border-radius: 8px;
-      word-wrap: break-word;
       font-weight: bold;
     }
     .tools {
       display: flex;
-      justify-content: space-between;
       gap: 1rem;
       margin-top: 1rem;
     }
@@ -83,19 +69,25 @@
       flex: 1;
     }
     #strength {
-      margin-top: 0.25rem;
       font-size: 0.9rem;
+      margin-top: 0.25rem;
     }
     #qrcode {
       margin-top: 1rem;
       text-align: center;
     }
+    .pass-toggle {
+      display: flex;
+      align-items: center;
+      margin-top: 0.25rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🔐 Santos Secure Encryption Tool</h2>
-    
+    <h2>🔐 Santos Encryption Tool</h2>
+
     <label for="action">Choose Action:</label>
     <select id="action">
       <option value="encrypt">Encrypt</option>
@@ -106,10 +98,10 @@
     <textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
 
     <label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
-    <div style="position: relative;">
-      <input type="password" id="key" placeholder="e.g., 3,1,4,1,5,9 or a phrase" oninput="checkStrength()" style="padding-right: 2.5rem;">
-      <button type="button" onclick="togglePasswordVisibility()" aria-label="Toggle Passphrase Visibility"
-        style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer;">👁️</button>
+    <input type="password" id="key" oninput="checkStrength()" placeholder="e.g., 3,1,4,1,5,9 or phrase">
+    <div class="pass-toggle">
+      <input type="checkbox" id="togglePass" onclick="togglePasswordVisibility()" />
+      <label for="togglePass" style="margin-left: 0.5rem;">Show passphrase</label>
     </div>
     <div id="strength"></div>
 
@@ -117,7 +109,7 @@
 
     <div class="tools">
       <button onclick="copyToClipboard()">📋 Copy Output</button>
-      <button onclick="toggleDarkMode()">🌓 Toggle Dark Mode</button>
+      <button onclick="toggleDarkMode()">🌓 Dark Mode</button>
     </div>
 
     <div class="result" id="result"></div>
@@ -127,9 +119,7 @@
   <script>
     function togglePasswordVisibility() {
       const keyInput = document.getElementById('key');
-      if (keyInput) {
-        keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
-      }
+      keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
     }
 
     function checkStrength() {
@@ -142,11 +132,7 @@
     function copyToClipboard() {
       const text = document.getElementById('result').textContent;
       const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
-      navigator.clipboard.writeText(cleaned).then(() => {
-        alert('Copied to clipboard!');
-      }).catch(err => {
-        alert('Failed to copy: ' + err);
-      });
+      navigator.clipboard.writeText(cleaned).then(() => alert('Copied!'));
     }
 
     function toggleDarkMode() {
@@ -169,7 +155,7 @@
           const salt = crypto.getRandomValues(new Uint8Array(16));
           const iv = crypto.getRandomValues(new Uint8Array(12));
           const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 
           if (action === 'encrypt') {
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
@@ -185,7 +171,7 @@
             const iv = data.slice(16, 28);
             const ciphertext = data.slice(28);
             const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+            const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
             const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
             resultDiv.textContent = `Decrypted Message:\n${new TextDecoder().decode(decrypted)}`;
           }
