@@ -2,14 +2,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Santos Secure Encryption Tool</title>
+  <title>HexaShift Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
   <!-- Manifest injection: single instance -->
   <script>
     if (!document.querySelector('link[rel="manifest"]')) {
       const manifest = {
-        name: "Santos Secure Encryption Tool",
-        short_name: "STET",
+        name: "HexaShift Encryption Tool",
+        short_name: "HexaShift",
         start_url: ".",
         display: "standalone",
         background_color: "#ffffff",
@@ -30,6 +30,7 @@
   </script>
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -108,7 +109,7 @@ button:hover {
 </head>
 <body>
   <div class="container">
-    <h2>🔐 Santos Secure Encryption Tool</h2><label for="action">Choose Action:</label>
+    <h2>🔐 HexaShift Encryption Tool</h2><label for="action">Choose Action:</label>
 <select id="action">
   <option value="encrypt">Encrypt</option>
   <option value="decrypt">Decrypt</option>
@@ -131,6 +132,10 @@ button:hover {
 
 <div class="result" id="result"></div>
 <div id="qrcode"></div>
+
+<label for="qrInput">Upload QR Code to Decrypt:</label>
+<input type="file" id="qrInput" accept="image/*">
+<button id="decodeQR">Decode QR & Decrypt</button>
 
   </div>  <script>
     function togglePasswordVisibility() {
@@ -220,5 +225,46 @@ button:hover {
         .catch(err => console.error('Service Worker registration failed:', err));
     }
   
+document.getElementById('decodeQR').addEventListener('click', async () => {
+  const fileInput = document.getElementById('qrInput');
+  const passphrase = document.getElementById('key').value;
+  const resultDiv = document.getElementById('result');
+
+  if (!fileInput.files[0]) return alert('Please upload a QR code image.');
+  if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+
+  const reader = new FileReader();
+  reader.onload = async function () {
+    const img = new Image();
+    img.onload = async function () {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+      const code = jsQR(imageData.data, canvas.width, canvas.height);
+      if (!code) return alert('QR code could not be read.');
+
+      try {
+        const enc = new TextEncoder();
+        const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
+        const salt = data.slice(0, 16);
+        const iv = data.slice(16, 28);
+        const ciphertext = data.slice(28);
+        const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+        resultDiv.textContent = `Decrypted Message:
+${new TextDecoder().decode(decrypted)}`;
+      } catch (err) {
+        resultDiv.textContent = 'Error: ' + err.message;
+      }
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(fileInput.files[0]);
+});
 </script></body>
 </html>
