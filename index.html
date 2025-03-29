@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -10,7 +9,7 @@
     if (!document.querySelector('link[rel="manifest"]')) {
       const manifest = {
         name: "Santos Secure Encryption Tool",
-        short_name: "SSET",
+        short_name: "STET",
         start_url: ".",
         display: "standalone",
         background_color: "#ffffff",
@@ -38,105 +37,102 @@
       color: #000;
       margin: 0;
       padding: 1rem;
-    }
-    .container {
-      max-width: 500px;
-      margin: auto;
-      background: #fff;
-      border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    h2 {
-      text-align: center;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 1rem;
-    }
-    input, textarea, select, button {
-      width: 100%;
-      padding: 0.75rem;
-      margin-top: 0.5rem;
-      font-size: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      box-sizing: border-box;
-    }
-    button {
-      background: #007bff;
-      color: #fff;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    .result {
-      margin-top: 1.5rem;
-      background: #f1f1f1;
-      padding: 1rem;
-      border-radius: 8px;
-      font-weight: bold;
-      overflow-wrap: break-word;
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-    .tools {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    .tools button {
-      flex: 1;
-    }
-    #strength {
-      font-size: 0.9rem;
-      margin-top: 0.25rem;
-    }
-    #qrcode {
-      margin-top: 1rem;
-      text-align: center;
-    }
-    .pass-toggle {
-      display: flex;
-      align-items: center;
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-    }
+    }.container {
+  max-width: 500px;
+  margin: auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+h2 {
+  text-align: center;
+}
+label {
+  font-weight: bold;
+  display: block;
+  margin-top: 1rem;
+}
+input, textarea, select, button {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+button {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+button:hover {
+  background: #0056b3;
+}
+.result {
+  margin-top: 1.5rem;
+  background: #f1f1f1;
+  padding: 1rem;
+  border-radius: 8px;
+  font-weight: bold;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+.tools {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.tools button {
+  flex: 1;
+}
+#strength {
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+#qrcode {
+  margin-top: 1rem;
+  text-align: center;
+}
+.pass-toggle {
+  display: flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🔐 Santos Secure Encryption Tool</h2>
+    <h2>🔐 Santos Secure Encryption Tool</h2><label for="action">Choose Action:</label>
+<select id="action">
+  <option value="encrypt">Encrypt</option>
+  <option value="decrypt">Decrypt</option>
+</select>
 
-    <label for="action">Choose Action:</label>
-    <select id="action">
-      <option value="encrypt">Encrypt</option>
-      <option value="decrypt">Decrypt</option>
-    </select>
+<label for="message">Message:</label>
+<textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
 
-    <label for="message">Message:</label>
-    <textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
+<label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
+<input type="password" id="key" oninput="checkStrength()" placeholder="e.g., 3,1,4,1,5,9 or phrase">
 
-    <label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
-    <input type="password" id="key" oninput="checkStrength()" placeholder="e.g., 3,1,4,1,5,9 or phrase">
-    
-    <div id="strength"></div>
+<div id="strength"></div>
 
-    <button id="runButton">Run</button>
+<button id="runButton">Run</button>
 
-    <div class="tools">
-      <button onclick="copyToClipboard()">📋 Copy Output</button>
-      <button onclick="togglePasswordVisibility()">👁️ Show/Hide Passphrase</button>
-    </div>
+<div class="tools">
+  <button onclick="copyToClipboard()">📋 Copy Output</button>
+  <button onclick="togglePasswordVisibility()">👁️ Show/Hide Passphrase</button>
+</div>
 
-    <div class="result" id="result"></div>
-    <div id="qrcode"></div>
-  </div>
+<div class="result" id="result"></div>
+<div id="qrcode"></div>
 
-  <script>
+  </div>  <script>
     function togglePasswordVisibility() {
       const keyInput = document.getElementById('key');
       keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
@@ -155,9 +151,7 @@
       navigator.clipboard.writeText(cleaned).then(() => alert('Copied!'));
     }
 
-    function toggleDarkMode() {
-      document.body.classList.toggle('dark-mode');
-    }
+    
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('runButton').addEventListener('click', async () => {
@@ -182,9 +176,15 @@
             const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
             const output = btoa(String.fromCharCode(...combined));
             resultDiv.textContent = `Encrypted Code:\n${output}`;
-            QRCode.toCanvas(document.createElement('canvas'), passphrase, (err, canvas) => {
-              if (!err) qrCodeDiv.appendChild(canvas);
-            });
+            QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+  if (!err) {
+    qrCodeDiv.appendChild(canvas);
+    const link = document.createElement('a');
+    link.download = 'encrypted-qr.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  }
+});
           } else {
             const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
@@ -219,7 +219,6 @@
         .then(reg => console.log('Service Worker registered:', reg))
         .catch(err => console.error('Service Worker registration failed:', err));
     }
-  document.getElementById('darkModeBtn').addEventListener('click', toggleDarkMode);
-</script>
-</body>
+  
+</script></body>
 </html>
