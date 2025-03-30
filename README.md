@@ -46,11 +46,7 @@ You may use either:
 
 ## 🔗 URL-Based Sharing
 
-When encrypting, you can generate a link like:
-
-https://yourdomain.com/index.html?code=ENCRYPTED_STRING
-
-Anyone with this link and the correct passphrase can decrypt the message.
+When encrypting, you can generate a link. Anyone with this link and the correct passphrase can decrypt the message.
 
 ## ⚠️ Security Notes
 
