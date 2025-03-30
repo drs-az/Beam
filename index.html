@@ -136,7 +136,7 @@ button:hover {
 <label for="qrInput">Upload QR Code to Decrypt:</label>
 <input type="file" id="qrInput" accept="image/*">
 <button id="decodeQR">Decode QR & Decrypt</button>
-
+<button id="shareButton">📤 Share Encrypted Link</button>
   </div>  <script>
     function togglePasswordVisibility() {
       const keyInput = document.getElementById('key');
@@ -265,6 +265,27 @@ ${new TextDecoder().decode(decrypted)}`;
     img.src = reader.result;
   };
   reader.readAsDataURL(fileInput.files[0]);
+});
+document.getElementById('shareButton').addEventListener('click', async () => {
+  const resultText = document.getElementById('result').textContent.trim();
+  const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+
+  if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
+
+  const shareData = {
+    title: 'Encrypted Message',
+    text: `Here's my secure encrypted message:\n\n${cleaned}`,
+  };
+
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (err) {
+      alert('Sharing failed: ' + err.message);
+    }
+  } else {
+    alert('Sharing not supported on this device.');
+  }
 });
 </script></body>
 </html>
