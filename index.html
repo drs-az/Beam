@@ -2,9 +2,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Santos Secure Encryption Tool</title>
+  <title>HexaShift Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
-  <!-- Manifest injection: single instance -->
   <script>
     if (!document.querySelector('link[rel="manifest"]')) {
       const manifest = {
@@ -38,89 +37,87 @@
       color: #000;
       margin: 0;
       padding: 1rem;
-    }.container {
-  max-width: 500px;
-  margin: auto;
-  background: #fff;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-h2 {
-  text-align: center;
-}
-label {
-  font-weight: bold;
-  display: block;
-  margin-top: 1rem;
-}
-input, textarea, select, button {
-  width: 100%;
-  padding: 0.75rem;
-  margin-top: 0.5rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-sizing: border-box;
-}
-button {
-  background: #007bff;
-  color: #fff;
-  border: none;
-  cursor: pointer;
-}
-button:hover {
-  background: #0056b3;
-}
-.result {
-  margin-top: 1.5rem;
-  background: #f1f1f1;
-  padding: 1rem;
-  border-radius: 8px;
-  font-weight: bold;
-  overflow-wrap: break-word;
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-.tools {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-.tools button {
-  flex: 1;
-}
-#strength {
-  font-size: 0.9rem;
-  margin-top: 0.25rem;
-}
-#qrcode {
-  margin-top: 1rem;
-  text-align: center;
-}
-.pass-toggle {
-  display: flex;
-  align-items: center;
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
-
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .result {
+      margin-top: 1.5rem;
+      background: #f1f1f1;
+      padding: 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .tools {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .tools button {
+      flex: 1;
+    }
+    #strength {
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+    #qrcode {
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .pass-toggle {
+      display: flex;
+      align-items: center;
+      margin-top: 0.5rem;
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>🔐 HexaShift Encryption Tool</h2><label for="action">Choose Action:</label>
-<select id="action">
-  <option value="encrypt">Encrypt</option>
-  <option value="decrypt">Decrypt</option>
-</select>
-
-<label for="message">Message:</label>
+    <h2>🔐 HexaShift Encryption Tool</h2>
+    <label for="action">Choose Action:</label>
+    <select id="action">
+      <option value="encrypt">Encrypt</option>
+      <option value="decrypt">Decrypt</option>
+    </select><label for="message">Message:</label>
 <textarea id="message" rows="4" placeholder="Enter your message..."></textarea>
 
 <label for="key">Enter your secure passphrase (e.g., 3,1,4,1,5,9 or correct horse battery staple). Use commas only if entering separate numbers:</label>
 <input type="password" id="key" oninput="checkStrength()" placeholder="e.g., 3,1,4,1,5,9 or phrase">
-
 <div id="strength"></div>
 
 <button id="runButton">Run</button>
@@ -132,7 +129,6 @@ button:hover {
 
 <div class="result" id="result"></div>
 <div id="qrcode"></div>
-
 <button id="shareButton">📤 Share Encrypted Link</button>
 
 <label for="qrInput">Upload QR Code to Decrypt:</label>
@@ -158,15 +154,14 @@ button:hover {
       navigator.clipboard.writeText(cleaned).then(() => alert('Copied!'));
     }
 
-    
-
     document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const preloadedCode = params.get('code');
-  if (preloadedCode) {
-    document.getElementById('message').value = preloadedCode;
-    document.getElementById('action').value = 'decrypt';
-  }
+      const params = new URLSearchParams(window.location.search);
+      const preloadedCode = params.get('code');
+      if (preloadedCode) {
+        document.getElementById('message').value = preloadedCode;
+        document.getElementById('action').value = 'decrypt';
+      }
+
       document.getElementById('runButton').addEventListener('click', async () => {
         const action = document.getElementById('action').value;
         const message = document.getElementById('message').value;
@@ -190,14 +185,14 @@ button:hover {
             const output = btoa(String.fromCharCode(...combined));
             resultDiv.textContent = `Encrypted Code:\n${output}`;
             QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-  if (!err) {
-    qrCodeDiv.appendChild(canvas);
-    const link = document.createElement('a');
-    link.download = 'encrypted-qr.png';
-    link.href = canvas.toDataURL();
-    link.click();
-  }
-});
+              if (!err) {
+                qrCodeDiv.appendChild(canvas);
+                const link = document.createElement('a');
+                link.download = 'encrypted-qr.png';
+                link.href = canvas.toDataURL();
+                link.click();
+              }
+            });
           } else {
             const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
@@ -212,158 +207,72 @@ button:hover {
           resultDiv.textContent = 'Error: ' + err.message;
         }
       });
+
+      document.getElementById('decodeQR').addEventListener('click', async () => {
+        const fileInput = document.getElementById('qrInput');
+        const passphrase = document.getElementById('key').value;
+        const resultDiv = document.getElementById('result');
+
+        if (!fileInput.files[0]) return alert('Please upload a QR code image.');
+        if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const img = new Image();
+          img.onload = async function () {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+            if (!code) return alert('QR code could not be read.');
+
+            try {
+              const enc = new TextEncoder();
+              const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
+              const salt = data.slice(0, 16);
+              const iv = data.slice(16, 28);
+              const ciphertext = data.slice(28);
+              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+              const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+              const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+              resultDiv.textContent = `Decrypted Message:\n${new TextDecoder().decode(decrypted)}`;
+            } catch (err) {
+              resultDiv.textContent = 'Error: ' + err.message;
+            }
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      });
+
+      document.getElementById('shareButton').addEventListener('click', async () => {
+        const resultText = document.getElementById('result').textContent.trim();
+        const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+
+        if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
+
+        const url = new URL(window.location.href);
+        url.searchParams.set('code', cleaned);
+
+        const shareData = {
+          title: 'Encrypted Message',
+          text: `Here's my secure encrypted message:\n\n${url.toString()}`,
+        };
+
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (err) {
+            alert('Sharing failed: ' + err.message);
+          }
+        } else {
+          alert('Sharing not supported on this device.');
+        }
+      });
     });
-
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', event => self.skipWaiting());
-        self.addEventListener('activate', event => self.clients.claim());
-        self.addEventListener('fetch', event => {
-          event.respondWith(
-            caches.match(event.request).then(response => {
-              return response || fetch(event.request);
-            })
-          );
-        });
-      `;
-      const swBlob = new Blob([swCode], { type: 'application/javascript' });
-      const swURL = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swURL)
-        .then(reg => console.log('Service Worker registered:', reg))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  
-document.getElementById('decodeQR').addEventListener('click', async () => {
-  const fileInput = document.getElementById('qrInput');
-  const passphrase = document.getElementById('key').value;
-  const resultDiv = document.getElementById('result');
-
-  if (!fileInput.files[0]) return alert('Please upload a QR code image.');
-  if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
-
-  const reader = new FileReader();
-  reader.onload = async function () {
-    const img = new Image();
-    img.onload = async function () {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-      const code = jsQR(imageData.data, canvas.width, canvas.height);
-      if (!code) return alert('QR code could not be read.');
-
-      try {
-        const enc = new TextEncoder();
-        const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
-        const salt = data.slice(0, 16);
-        const iv = data.slice(16, 28);
-        const ciphertext = data.slice(28);
-        const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-        resultDiv.textContent = `Decrypted Message:
-${new TextDecoder().decode(decrypted)}`;
-      } catch (err) {
-        resultDiv.textContent = 'Error: ' + err.message;
-      }
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(fileInput.files[0]);
-});
-document.getElementById('shareButton').addEventListener('click', async () => {
-  const resultText = document.getElementById('result').textContent.trim();
-  const cleaned = resultText.replace(/^Encrypted Code:
-?|^Decrypted Message:
-?/, '').trim();
-
-  if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
-
-  const url = new URL(window.location.href);
-  url.searchParams.set('code', cleaned);
-
-  const shareData = {
-    title: 'Encrypted Message',
-    text: `Here's my secure encrypted message:
-
-${url.toString()}`,
-  };
-
-  if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-    } catch (err) {
-      alert('Sharing failed: ' + err.message);
-    }
-  } else {
-    alert('Sharing not supported on this device.');
-  }
-});
-</script></body>
-<!-- README SECTION -->
-<!--
-# Santos Secure Encryption ToolOverview
-
-A simple, secure web-based encryption and decryption tool. No data is sent to any server. Built for portability, offline use, and total user control.
-
-Features
-
-AES-GCM 256-bit encryption using WebCrypto API
-
-PBKDF2 key derivation with 150,000 iterations
-
-Password strength meter (via zxcvbn)
-
-Client-side QR code generation of encrypted message
-
-Automatic QR code download (as PNG)
-
-Optional QR code upload and secure passphrase entry for decryption
-
-PWA-ready: install to home screen, offline-capable
-
-Toggle passphrase visibility (👁️)
-
-
-How It Works
-
-1. User enters message and passphrase.
-
-
-2. Click "Run" to encrypt or decrypt based on selection.
-
-
-3. Encrypted output is shown and a QR code is generated.
-
-
-4. The QR code is automatically downloaded.
-
-
-5. To decrypt, a user can upload a saved QR code and enter the correct passphrase.
-
-
-
-Usage
-
-Encryption: input message + passphrase → encrypted output + QR code
-
-Decryption: input encrypted string + passphrase or upload QR image
-
-
-Security
-
-20-digit or phrase passphrase recommended
-
-Client-side only: nothing leaves the browser
-
-Entropy estimates suggest multi-century brute force resistance for strong passphrases
-
-
-License
-
-MIT License — use freely, attribute kindly. -->
-
+  </script></body>
 </html>
