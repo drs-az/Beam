@@ -135,159 +135,156 @@
 <label for="qrInput">Upload QR Code to Decrypt:</label>
 <input type="file" id="qrInput" accept="image/*">
 <button id="decodeQR">Decode QR & Decrypt</button>
-
-<label for="imageInput">Upload Image to Encrypt:</label> <input type="file" id="imageInput" accept="image/*"> <button id="encryptImage">Encrypt Image</button>
-
-</div>
+<p><strong>--</strong></p>
+<p>Made with ❤️ in 🌵 for the privacy-minded. Follow <a href="https://x.com/HexaShiftApp" target="_blank" rel="noopener noreferrer">HexaShift on 𝕏</a></p>
+<p><strong>Own your encryption. Share nothing else.</strong></p>
+  </div>
 <script>
     function togglePasswordVisibility() {
       const keyInput = document.getElementById('key');
       keyInput.type = keyInput.type === 'password' ? 'text' : 'password';
-    }function checkStrength() {
-  const input = document.getElementById('key').value;
-  const result = zxcvbn(input);
-  const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
-  document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
-}
+    }
 
-function copyToClipboard() {
-  const text = document.getElementById('result').textContent;
-  const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
-  navigator.clipboard.writeText(cleaned).then(() => alert('Copied!'));
-}
+    function checkStrength() {
+      const input = document.getElementById('key').value;
+      const result = zxcvbn(input);
+      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
+    }
 
-document.addEventListener('DOMContentLoaded', () => {
-  const params = new URLSearchParams(window.location.search);
-  const preloadedCode = params.get('code');
-  if (preloadedCode) {
-    document.getElementById('message').value = preloadedCode;
-    document.getElementById('action').value = 'decrypt';
-  }
+    function copyToClipboard() {
+      const text = document.getElementById('result').textContent;
+      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+      navigator.clipboard.writeText(cleaned).then(() => alert('Copied!'));
+    }
 
-  document.getElementById('runButton').addEventListener('click', async () => {
-    const action = document.getElementById('action').value;
-    const message = document.getElementById('message').value;
-    const keyInput = document.getElementById('key').value;
-    const resultDiv = document.getElementById('result');
-    const qrCodeDiv = document.getElementById('qrcode');
-    qrCodeDiv.innerHTML = '';
+    document.addEventListener('DOMContentLoaded', () => {
+      const params = new URLSearchParams(window.location.search);
+      const preloadedCode = params.get('code');
+      if (preloadedCode) {
+        document.getElementById('message').value = preloadedCode;
+        document.getElementById('action').value = 'decrypt';
+      }
 
-    try {
-      if (keyInput.length < 6) throw new Error("Passphrase must be at least 6 characters.");
-      const passphrase = keyInput.trim();
-      const enc = new TextEncoder();
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
-
-      if (action === 'encrypt') {
-        const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
-        const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-        const output = btoa(String.fromCharCode(...combined));
-        resultDiv.textContent = `Encrypted Code:\n${output}`;
-        QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-          if (!err) {
-            qrCodeDiv.appendChild(canvas);
-            const link = document.createElement('a');
-            link.download = 'encrypted-qr.png';
-            link.href = canvas.toDataURL();
-            link.click();
-          }
-        });
-      } else {
-        const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
-        const salt = data.slice(0, 16);
-        const iv = data.slice(16, 28);
-        const ciphertext = data.slice(28);
-        const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-        const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-        const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-
-const sepIndex = new Uint8Array(decrypted).indexOf(124); // '|' separator if (sepIndex !== -1) { const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex)); const content = new Uint8Array(decrypted).slice(sepIndex + 1); const blob = new Blob([content], { type: mime }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'decrypted-file'; link.click(); resultDiv.textContent = Decrypted File (${mime}) downloaded.; } else { resultDiv.textContent = Decrypted Message: ${new TextDecoder().decode(decrypted)}; } } } } catch (err) { resultDiv.textContent = 'Error: ' + err.message; } });
-
-document.getElementById('decodeQR').addEventListener('click', async () => {
-    const fileInput = document.getElementById('qrInput');
-    const passphrase = document.getElementById('key').value;
-    const resultDiv = document.getElementById('result');
-
-    if (!fileInput.files[0]) return alert('Please upload a QR code image.');
-    if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
-
-    const reader = new FileReader();
-    reader.onload = async function () {
-      const img = new Image();
-      img.onload = async function () {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-        if (!code) return alert('QR code could not be read.');
+      document.getElementById('runButton').addEventListener('click', async () => {
+        const action = document.getElementById('action').value;
+        const message = document.getElementById('message').value;
+        const keyInput = document.getElementById('key').value;
+        const resultDiv = document.getElementById('result');
+        const qrCodeDiv = document.getElementById('qrcode');
+        qrCodeDiv.innerHTML = '';
 
         try {
+          if (keyInput.length < 6) throw new Error("Passphrase must be at least 6 characters.");
+          const passphrase = keyInput.trim();
           const enc = new TextEncoder();
-          const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
-          const salt = data.slice(0, 16);
-          const iv = data.slice(16, 28);
-          const ciphertext = data.slice(28);
+          const salt = crypto.getRandomValues(new Uint8Array(16));
+          const iv = crypto.getRandomValues(new Uint8Array(12));
           const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
-          const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-          resultDiv.textContent = `Decrypted Message:\n${new TextDecoder().decode(decrypted)}`;
+          const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+
+          if (action === 'encrypt') {
+            const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
+            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+            const output = btoa(String.fromCharCode(...combined));
+            resultDiv.textContent = `Encrypted Code:\n${output}`;
+            QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+              if (!err) {
+                qrCodeDiv.appendChild(canvas);
+                const link = document.createElement('a');
+                link.download = 'encrypted-qr.png';
+                link.href = canvas.toDataURL();
+                link.click();
+              }
+            });
+          } else {
+            const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
+            const salt = data.slice(0, 16);
+            const iv = data.slice(16, 28);
+            const ciphertext = data.slice(28);
+            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+            const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+            const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+            resultDiv.textContent = `Decrypted Message:\n${new TextDecoder().decode(decrypted)}`;
+          }
         } catch (err) {
           resultDiv.textContent = 'Error: ' + err.message;
         }
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(fileInput.files[0]);
-  });
+      });
 
-  document.getElementById('shareButton').addEventListener('click', async () => {
+      document.getElementById('decodeQR').addEventListener('click', async () => {
+        const fileInput = document.getElementById('qrInput');
+        const passphrase = document.getElementById('key').value;
+        const resultDiv = document.getElementById('result');
 
-const resultText = document.getElementById('result').textContent.trim(); const cleaned = resultText.replace(/^Encrypted Code: ?|^Decrypted Message: ?/, '').trim();
+        if (!fileInput.files[0]) return alert('Please upload a QR code image.');
+        if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
 
-if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
+        const reader = new FileReader();
+        reader.onload = async function () {
+          const img = new Image();
+          img.onload = async function () {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-const url = new URL(window.location.href); url.searchParams.set('code', cleaned);
+            const code = jsQR(imageData.data, canvas.width, canvas.height);
+            if (!code) return alert('QR code could not be read.');
 
-const shareData = { title: 'Encrypted Message', text: `Here's my secure encrypted message:
+            try {
+              const enc = new TextEncoder();
+              const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
+              const salt = data.slice(0, 16);
+              const iv = data.slice(16, 28);
+              const ciphertext = data.slice(28);
+              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+              const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+              const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+              resultDiv.textContent = `Decrypted Message:\n${new TextDecoder().decode(decrypted)}`;
+            } catch (err) {
+              resultDiv.textContent = 'Error: ' + err.message;
+            }
+          };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      });
 
-${url.toString()}`, };
+      document.getElementById('shareButton').addEventListener('click', async () => {
+        const resultText = document.getElementById('result').textContent.trim();
+        const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
 
-if (navigator.share) { try { await navigator.share(shareData); } catch (err) { alert('Sharing failed: ' + err.message); } } else { alert('Sharing not supported on this device.'); } });
+        if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
 
-// Encrypt image logic document.getElementById('encryptImage').addEventListener('click', async () => { const fileInput = document.getElementById('imageInput'); const resultDiv = document.getElementById('result'); const qrCodeDiv = document.getElementById('qrcode'); const passphrase = document.getElementById('key').value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('code', cleaned);
 
-if (!fileInput.files[0]) return alert('Please upload an image.');
-    if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+        const shareData = {
+          title: 'Encrypted Message',
+          text: `Here's my secure encrypted message:\n\n${url.toString()}`,
+        };
 
-    const reader = new FileReader();
-    reader.onload = async function () {
-      const arrayBuffer = reader.result;
-      const mimeType = fileInput.files[0].type;
-      const prefix = new TextEncoder().encode(mimeType + '|');
-      const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
-      fullBuffer.set(prefix, 0);
-      fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
-
-      const enc = new TextEncoder();
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" }, keyMaterial, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
-
-      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
-      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-      const output = btoa(String.fromCharCode(...combined));
-
-      resultDiv.textContent = `Encrypted Code:
-
-${output}`; qrCodeDiv.innerHTML = ''; QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => { if (!err) { qrCodeDiv.appendChild(canvas); const link = document.createElement('a'); link.download = 'encrypted-qr.png'; link.href = canvas.toDataURL(); link.click(); } }); }; reader.readAsArrayBuffer(fileInput.files[0]); }); }); function resetForm() { document.getElementById('action').value = 'encrypt'; document.getElementById('message').value = ''; document.getElementById('key').value = ''; document.getElementById('result').textContent = ''; document.getElementById('strength').textContent = ''; document.getElementById('qrcode').innerHTML = ''; } </script>
-
-</body>
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (err) {
+            alert('Sharing failed: ' + err.message);
+          }
+        } else {
+          alert('Sharing not supported on this device.');
+        }
+      });
+    });
+  function resetForm() {
+  document.getElementById('action').value = 'encrypt';
+  document.getElementById('message').value = '';
+  document.getElementById('key').value = '';
+  document.getElementById('result').textContent = '';
+  document.getElementById('strength').textContent = '';
+  document.getElementById('qrcode').innerHTML = '';
+}
+</script></body>
 </html>
