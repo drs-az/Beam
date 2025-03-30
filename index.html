@@ -5,58 +5,148 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>HexaShift Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
-  
+  <!-- Manifest for PWA -->
+  <script>
+    if (!document.querySelector('link[rel="manifest"]')) {
+      const manifest = {
+        name: "HexaShift Encryption Tool",
+        short_name: "HexaShift",
+        start_url: ".",
+        display: "standalone",
+        background_color: "#ffffff",
+        theme_color: "#007bff",
+        icons: [{
+          src: "https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg",
+          type: "image/png",
+          sizes: "512x512"
+        }]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestURL = URL.createObjectURL(blob);
+      const link = document.createElement('link');
+      link.rel = 'manifest';
+      link.href = manifestURL;
+      document.head.appendChild(link);
+    }
+  </script>
+  <!-- Updated external library references -->
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
-  
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      color: #000;
+      margin: 0;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    h1, h2 {
+      text-align: center;
+    }
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 1rem;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
     .hidden { display: none; }
-    body { font-family: sans-serif; margin: 20px; }
-    label { display: block; margin-top: 10px; }
+    #strength {
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
+    .tools {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .tools button {
+      flex: 1;
+    }
+    .result {
+      margin-top: 1.5rem;
+      background: #f1f1f1;
+      padding: 1rem;
+      border-radius: 8px;
+      font-weight: bold;
+      overflow-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    #qrcode {
+      margin-top: 1rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
-  <h1>HexaShift Encryption Tool</h1>
-  <label for="action">Select Action:</label>
-  <select id="action" onchange="adjustView()">
-    <option value="encryptText">Encrypt Text</option>
-    <option value="decrypt">Decrypt Text/File</option>
-    <option value="encryptImage">Encrypt Image</option>
-    <option value="decryptQR">Decrypt QR</option>
-  </select>
-  
-  <div id="messageGroup">
-    <label for="message">Message / Encrypted Code:</label>
-    <textarea id="message" rows="4" cols="50"></textarea>
+  <div class="container">
+    <h1>HexaShift Encryption Tool</h1>
+    <label for="action">Select Action:</label>
+    <select id="action" onchange="adjustView()">
+      <option value="encryptText">Encrypt Text</option>
+      <option value="decrypt">Decrypt Text/File</option>
+      <option value="encryptImage">Encrypt Image</option>
+      <option value="decryptQR">Decrypt QR</option>
+    </select>
+    
+    <div id="messageGroup">
+      <label for="message">Message / Encrypted Code:</label>
+      <textarea id="message" rows="4" placeholder="Enter your message or paste an encrypted code..."></textarea>
+    </div>
+    
+    <div id="imageGroup" class="hidden">
+      <label for="imageInput">Upload Image:</label>
+      <input type="file" id="imageInput" accept="image/*">
+    </div>
+    
+    <div id="qrGroup" class="hidden">
+      <label for="qrInput">Upload QR Code Image:</label>
+      <input type="file" id="qrInput" accept="image/*">
+    </div>
+    
+    <label for="key">Passphrase:</label>
+    <input type="password" id="key" oninput="checkStrength()" placeholder="Enter your passphrase">
+    <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
+    <div id="strength"></div>
+    
+    <div class="tools" style="margin-top: 10px;">
+      <button id="runButton">Run</button>
+      <button id="encryptImage">Encrypt Image</button>
+      <button id="decodeQR">Decode QR</button>
+      <button onclick="resetForm()">Reset</button>
+      <button onclick="copyToClipboard()">Copy Result</button>
+    </div>
+    
+    <h2>Result</h2>
+    <pre class="result" id="result"></pre>
+    <div id="qrcode"></div>
+    <button id="shareButton">📤 Share Encrypted Link</button>
   </div>
-  
-  <div id="imageGroup" class="hidden">
-    <label for="imageInput">Upload Image:</label>
-    <input type="file" id="imageInput" accept="image/*">
-  </div>
-  
-  <div id="qrGroup" class="hidden">
-    <label for="qrInput">Upload QR Code Image:</label>
-    <input type="file" id="qrInput" accept="image/*">
-  </div>
-  
-  <label for="key">Passphrase:</label>
-  <input type="password" id="key" oninput="checkStrength()">
-  <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
-  <div id="strength"></div>
-  
-  <div style="margin-top: 10px;">
-    <button id="runButton">Run</button>
-    <button id="encryptImage">Encrypt Image</button>
-    <button id="decodeQR">Decode QR</button>
-    <button onclick="resetForm()">Reset</button>
-    <button onclick="copyToClipboard()">Copy Result</button>
-  </div>
-  
-  <h2>Result</h2>
-  <pre id="result"></pre>
-  <div id="qrcode"></div>
   
   <script>
     function adjustView() {
@@ -81,7 +171,7 @@
     
     function copyToClipboard() { 
       const text = document.getElementById('result').textContent; 
-      const cleaned = text.replace(/^Encrypted Code: ?|^Decrypted Message: ?/, '').trim(); 
+      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim(); 
       navigator.clipboard.writeText(cleaned).then(() => alert('Copied!')); 
     }
     
@@ -149,7 +239,8 @@
               ["decrypt"]
             );
             const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-            const sepIndex = new Uint8Array(decrypted).indexOf(124); // ASCII code 124 (|)
+            // Check for file download marker (| character, ASCII 124)
+            const sepIndex = new Uint8Array(decrypted).indexOf(124);
             if (sepIndex !== -1) {
               const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
               const content = new Uint8Array(decrypted).slice(sepIndex + 1);
@@ -160,7 +251,7 @@
               link.click();
               resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
             } else {
-              resultDiv.textContent = `Decrypted Message: ${new TextDecoder().decode(decrypted)}`;
+              resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
             }
           }
         } catch (err) {
@@ -271,6 +362,32 @@
           img.src = reader.result;
         };
         reader.readAsDataURL(fileInput.files[0]);
+      });
+    
+      // Share encrypted output event listener
+      document.getElementById('shareButton').addEventListener('click', async () => {
+        const resultText = document.getElementById('result').textContent.trim();
+        const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+    
+        if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
+    
+        const url = new URL(window.location.href);
+        url.searchParams.set('code', cleaned);
+    
+        const shareData = {
+          title: 'Encrypted Message',
+          text: `Here's my secure encrypted message:\n\n${url.toString()}`,
+        };
+    
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (err) {
+            alert('Sharing failed: ' + err.message);
+          }
+        } else {
+          alert('Sharing not supported on this device.');
+        }
       });
     });
   </script>
