@@ -1,18 +1,20 @@
-# 🔐 SSET (PWA)
+# 🔐 HexaShift (PWA)
 
-SSET is a secure, offline-capable encryption tool built as a single-page Progressive Web App (PWA). It enables simple, private message encryption and decryption using a custom passphrase.
+HexaShift is a secure, offline-capable encryption utility built as a single-page Progressive Web App (PWA). It enables private, client-side encryption and decryption of messages using a custom passphrase.
 
 ## ✨ Features
 
-- AES-256-GCM encryption
+- AES-256-GCM encryption via WebCrypto API
 - PBKDF2 key derivation (150k iterations, SHA-256)
 - Custom passphrase input (numeric with commas or full alphanumeric)
 - Passphrase strength meter using zxcvbn
-- Offline-capable via Service Worker
 - Copy-to-clipboard support
-- Dark mode toggle
-- Optional QR code for key sharing
-- Mobile-first design + installable as a web app (PWA)
+- Generate and download a QR code of the encrypted message
+- Upload and decode QR codes for decryption
+- Share encrypted messages via mobile-friendly URL with auto-decrypt preload
+- Mobile-first UI
+- Installable as a secure offline web app (PWA)
+- No dark mode (simplified layout)
 
 ## 🔐 Passphrase Input
 
@@ -26,20 +28,11 @@ You may use either:
 
 1. Open the app (`index.html`) in a browser
 2. Choose to **Encrypt** or **Decrypt**
-3. Enter your message
-4. Enter your passphrase
-5. Click **Run**
-6. Copy the result or scan the key QR code (optional)
+3. Enter your message and passphrase
+4. Click **Run**
+5. Copy the output, scan the QR code, or click **Share** to generate a link
+6. To decrypt via QR code: upload the image and enter your passphrase
 
-## 📱 PWA Support
+## 🔗 URL Sharing
 
-- Fully offline after first load
-- Installable on Android and desktop
-- Fullscreen experience with local-only processing
-
-## ⚠️ Security Notes
-
-- Encryption is handled completely in-browser
-- No data is transmitted or stored
-- Use a strong, unique passphrase for best protection
-- This tool does not implement forward secrecy
+When encrypted, you can generate a shareable URL like:
