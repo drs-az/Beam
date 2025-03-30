@@ -81,17 +81,17 @@
       margin-top: 0.25rem;
     }
     .tools {
-  display: flex;
-  flex-direction: column; /* Stacks items vertically */
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-/* Optionally remove flex: 1 if you don't want buttons to stretch */
-.tools button {
-  /* Remove or adjust this if you want a different width */
-  /* flex: 1; */
-}
+      display: flex;
+      flex-direction: column; /* Stacks items vertically */
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    /* Optionally remove flex: 1 if you don't want buttons to stretch */
+    .tools button {
+      /* Remove or adjust this if you want a different width */
+      /* flex: 1; */
+    }
     .result {
       margin-top: 1.5rem;
       background: #f1f1f1;
@@ -139,21 +139,20 @@
     <div id="strength"></div>
     
     <div class="tools" style="margin-top: 10px;">
-  <button id="runButton">Run</button>
-  <button id="encryptImage">Encrypt Image</button>
-  <button id="decodeQR">Decode QR</button>
-  <button onclick="resetForm()">Reset</button>
-  <button onclick="copyToClipboard()">Copy Result</button>
-</div>
+      <button id="runButton">Run</button>
+      <button id="encryptImage">Encrypt Image</button>
+      <button id="decodeQR">Decode QR</button>
+      <button onclick="resetForm()">Reset</button>
+      <button onclick="copyToClipboard()">Copy Result</button>
+    </div>
     
     <h2>Result</h2>
     <pre class="result" id="result"></pre>
     <div id="qrcode"></div>
     <button id="shareButton">📤 Share Encrypted Link</button>
-<p><strong>--</strong></p>
-<p>Made with ❤️ in 🌵 for the privacy-minded. Follow <a href="https://x.com/HexaShiftApp" target="_blank" rel="noopener noreferrer">HexaShift on 𝕏</a></p>
-<p><strong>Own your encryption. Share nothing else.</strong></p>
-
+    <p><strong>--</strong></p>
+    <p>Made with ❤️ in 🌵 for the privacy-minded. Follow <a href="https://x.com/HexaShiftApp" target="_blank" rel="noopener noreferrer">HexaShift on 𝕏</a></p>
+    <p><strong>Own your encryption. Share nothing else.</strong></p>
   </div>
   
   <script>
@@ -194,7 +193,16 @@
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
-      adjustView(); 
+      adjustView();
+      
+      // Check for 'code' query parameter and set decryption view if present
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        document.getElementById('action').value = 'decrypt';
+        document.getElementById('message').value = code;
+        adjustView();
+      }
     
       // Run button for text encryption/decryption
       document.getElementById('runButton').addEventListener('click', async () => { 
