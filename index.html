@@ -123,6 +123,7 @@
 <button id="runButton">Run</button>
 
 <div class="tools">
+  <button onclick="resetForm()">🔄 Reset</button>
   <button onclick="copyToClipboard()">📋 Copy Output</button>
   <button onclick="togglePasswordVisibility()">👁️ Show/Hide Passphrase</button>
 </div>
@@ -274,5 +275,13 @@
         }
       });
     });
-  </script></body>
+  function resetForm() {
+  document.getElementById('action').value = 'encrypt';
+  document.getElementById('message').value = '';
+  document.getElementById('key').value = '';
+  document.getElementById('result').textContent = '';
+  document.getElementById('strength').textContent = '';
+  document.getElementById('qrcode').innerHTML = '';
+}
+</script></body>
 </html>
