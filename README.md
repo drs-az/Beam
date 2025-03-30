@@ -4,7 +4,7 @@
 
 ## 🛡️ Privacy-First Philosophy
 
-Unlike legal-grade or enterprise tools that prioritize auditability and compliance, SSET embraces:
+Unlike legal-grade or enterprise tools that prioritize auditability and compliance, HexaShift embraces:
 
 - **Anonymity over accountability**
 - **Simplicity over bureaucracy**
