@@ -2,7 +2,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HexaShift Encryption Tool</title>
+  <title>Santos Secure Encryption Tool</title>
   <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
   <!-- Manifest injection: single instance -->
   <script>
@@ -133,10 +133,12 @@ button:hover {
 <div class="result" id="result"></div>
 <div id="qrcode"></div>
 
+<button id="shareButton">📤 Share Encrypted Link</button>
+
 <label for="qrInput">Upload QR Code to Decrypt:</label>
 <input type="file" id="qrInput" accept="image/*">
 <button id="decodeQR">Decode QR & Decrypt</button>
-<button id="shareButton">📤 Share Encrypted Link</button>
+
   </div>  <script>
     function togglePasswordVisibility() {
       const keyInput = document.getElementById('key');
@@ -159,6 +161,12 @@ button:hover {
     
 
     document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const preloadedCode = params.get('code');
+  if (preloadedCode) {
+    document.getElementById('message').value = preloadedCode;
+    document.getElementById('action').value = 'decrypt';
+  }
       document.getElementById('runButton').addEventListener('click', async () => {
         const action = document.getElementById('action').value;
         const message = document.getElementById('message').value;
@@ -268,13 +276,20 @@ ${new TextDecoder().decode(decrypted)}`;
 });
 document.getElementById('shareButton').addEventListener('click', async () => {
   const resultText = document.getElementById('result').textContent.trim();
-  const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+  const cleaned = resultText.replace(/^Encrypted Code:
+?|^Decrypted Message:
+?/, '').trim();
 
   if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
 
+  const url = new URL(window.location.href);
+  url.searchParams.set('code', cleaned);
+
   const shareData = {
     title: 'Encrypted Message',
-    text: `Here's my secure encrypted message:\n\n${cleaned}`,
+    text: `Here's my secure encrypted message:
+
+${url.toString()}`,
   };
 
   if (navigator.share) {
@@ -288,4 +303,67 @@ document.getElementById('shareButton').addEventListener('click', async () => {
   }
 });
 </script></body>
+<!-- README SECTION -->
+<!--
+# Santos Secure Encryption ToolOverview
+
+A simple, secure web-based encryption and decryption tool. No data is sent to any server. Built for portability, offline use, and total user control.
+
+Features
+
+AES-GCM 256-bit encryption using WebCrypto API
+
+PBKDF2 key derivation with 150,000 iterations
+
+Password strength meter (via zxcvbn)
+
+Client-side QR code generation of encrypted message
+
+Automatic QR code download (as PNG)
+
+Optional QR code upload and secure passphrase entry for decryption
+
+PWA-ready: install to home screen, offline-capable
+
+Toggle passphrase visibility (👁️)
+
+
+How It Works
+
+1. User enters message and passphrase.
+
+
+2. Click "Run" to encrypt or decrypt based on selection.
+
+
+3. Encrypted output is shown and a QR code is generated.
+
+
+4. The QR code is automatically downloaded.
+
+
+5. To decrypt, a user can upload a saved QR code and enter the correct passphrase.
+
+
+
+Usage
+
+Encryption: input message + passphrase → encrypted output + QR code
+
+Decryption: input encrypted string + passphrase or upload QR image
+
+
+Security
+
+20-digit or phrase passphrase recommended
+
+Client-side only: nothing leaves the browser
+
+Entropy estimates suggest multi-century brute force resistance for strong passphrases
+
+
+License
+
+MIT License — use freely, attribute kindly. -->
+
 </html>
