@@ -107,8 +107,8 @@
     <label for="action">Select Action:</label>
     <select id="action" onchange="adjustView()">
       <option value="encryptText">Encrypt Text</option>
+      <option value="encryptImage">Encrypt Image</option
       <option value="decrypt">Decrypt Text/File</option>
-      <option value="encryptImage">Encrypt Image</option>
       <option value="decryptQR">Decrypt QR</option>
     </select>
     
@@ -118,7 +118,7 @@
     </div>
     
     <div id="imageGroup" class="hidden">
-      <label for="imageInput">Upload Image:</label>
+      <label for="imageInput">Upload Image (large images will not encrypt):</label>
       <input type="file" id="imageInput" accept="image/*">
     </div>
     
