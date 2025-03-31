@@ -451,3 +451,34 @@
     
         if (cleaned.length > MAX_OUTPUT_LENGTH) {
           const blob = new Blob([cleaned], { type: 'text/plain' })
+          const fileUrl = URL.createObjectURL(blob);
+          alert('Encrypted output is too long to share as a link. A text file has been generated for you to share.');
+          const downloadLink = document.createElement('a');
+          downloadLink.href = fileUrl;
+          downloadLink.download = 'encrypted-output.txt';
+          downloadLink.click();
+          return;
+        }
+    
+        const url = new URL(window.location.href);
+        url.searchParams.set('code', cleaned);
+    
+        const shareData = {
+          title: 'Encrypted Message',
+          text: `Here's my secure encrypted message:\n\n${url.toString()}`,
+        };
+    
+        if (navigator.share) {
+          try {
+            await navigator.share(shareData);
+          } catch (err) {
+            alert('Sharing failed: ' + err.message);
+          }
+        } else {
+          alert('Sharing not supported on this device.');
+        }
+      });
+    });
+  </script>
+</body>
+</html>
