@@ -124,7 +124,7 @@
     </div>
     
     <div id="imageGroup" class="hidden">
-      <label for="imageInput">Upload Image (large images will not encrypt):</label>
+      <label for="imageInput">Upload Image (100kb max):</label>
       <input type="file" id="imageInput" accept="image/*">
     </div>
     
@@ -345,60 +345,67 @@
       });
     
       // Encrypt Image button handler
-      document.getElementById('encryptImage').addEventListener('click', async () => { 
-        const fileInput = document.getElementById('imageInput'); 
-        const resultDiv = document.getElementById('result'); 
-        const qrCodeDiv = document.getElementById('qrcode'); 
-        const passphrase = document.getElementById('key').value.trim(); 
-        if (!fileInput.files[0]) return alert('Please upload an image.'); 
-        if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+  document.getElementById('encryptImage').addEventListener('click', async () => { 
+    const fileInput = document.getElementById('imageInput'); 
+    const resultDiv = document.getElementById('result'); 
+    const qrCodeDiv = document.getElementById('qrcode'); 
+    const passphrase = document.getElementById('key').value.trim(); 
+    if (!fileInput.files[0]) return alert('Please upload an image.'); 
+
+    // Check if the image file size exceeds 100kb (100 * 1024 bytes)
+    if (fileInput.files[0].size > 100 * 1024) {
+      resultDiv.textContent = 'Error: Image size exceeds the maximum file size of 100kb.';
+      return;
+    }
+
+    if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
     
-        const reader = new FileReader();
-        reader.onload = async function () {
-          const arrayBuffer = reader.result;
-          const mimeType = fileInput.files[0].type;
-          const prefix = enc.encode(mimeType + '|');
-          const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
-          fullBuffer.set(prefix, 0);
-          fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
-    
-          const salt = crypto.getRandomValues(new Uint8Array(16));
-          const iv = crypto.getRandomValues(new Uint8Array(12));
-          const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-          const key = await crypto.subtle.deriveKey(
-            { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-            keyMaterial,
-            { name: "AES-GCM", length: 256 },
-            false,
-            ["encrypt"]
-          );
-          const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
-          const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-          const output = btoa(String.fromCharCode(...combined));
-    
-          if (output.length > MAX_OUTPUT_LENGTH) {
-            resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
-            const blob = new Blob([output], { type: 'text/plain' });
+    const reader = new FileReader();
+    reader.onload = async function () {
+      const arrayBuffer = reader.result;
+      const mimeType = fileInput.files[0].type;
+      const prefix = new TextEncoder().encode(mimeType + '|');
+      const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
+      fullBuffer.set(prefix, 0);
+      fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
+      
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
+      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+      const output = btoa(String.fromCharCode(...combined));
+      
+      if (output.length > 1000) {
+        resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
+        const blob = new Blob([output], { type: 'text/plain' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'encrypted-output.txt';
+        link.click();
+      } else {
+        resultDiv.textContent = `Encrypted Code:\n\n${output}`;
+        qrCodeDiv.innerHTML = '';
+        QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+          if (!err) {
+            qrCodeDiv.appendChild(canvas);
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'encrypted-output.txt';
+            link.download = 'encrypted-qr.png';
+            link.href = canvas.toDataURL();
             link.click();
-          } else {
-            resultDiv.textContent = `Encrypted Code:\n\n${output}`;
-            qrCodeDiv.innerHTML = '';
-            QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-              if (!err) {
-                qrCodeDiv.appendChild(canvas);
-                const link = document.createElement('a');
-                link.download = 'encrypted-qr.png';
-                link.href = canvas.toDataURL();
-                link.click();
-              }
-            });
           }
-        };
-        reader.readAsArrayBuffer(fileInput.files[0]);
-      });
+        });
+      }
+    };
+    reader.readAsArrayBuffer(fileInput.files[0]);
+  });
     
       // Decode QR button handler
       document.getElementById('decodeQR').addEventListener('click', async () => { 
