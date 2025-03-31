@@ -82,15 +82,9 @@
     }
     .tools {
       display: flex;
-      flex-direction: column; /* Stacks items vertically */
+      flex-direction: column;
       gap: 1rem;
       margin-top: 1rem;
-    }
-    
-    /* Optionally remove flex: 1 if you don't want buttons to stretch */
-    .tools button {
-      /* Remove or adjust this if you want a different width */
-      /* flex: 1; */
     }
     .result {
       margin-top: 1.5rem;
@@ -152,7 +146,7 @@
     <button id="shareButton">📤 Share Encrypted Link</button>
     <p><strong>--</strong></p>
     <p>Made with ❤️ in 🌵 for the privacy-minded.</p>
-<p>Follow <a href="https://x.com/HexaShiftApp" target="_blank" rel="noopener noreferrer">HexaShift on 𝕏</a> • <a href="https://github.com/drs-az/SSET" target="_blank" rel="noopener noreferrer">GitHub Repo</a></p>
+    <p>Follow <a href="https://x.com/HexaShiftApp" target="_blank" rel="noopener noreferrer">HexaShift on 𝕏</a> • <a href="https://github.com/drs-az/SSET" target="_blank" rel="noopener noreferrer">GitHub Repo</a></p>
     <p><strong>Own your encryption. Share nothing else.</strong></p>
   </div>
   
@@ -194,6 +188,9 @@
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
+      // Set an upper limit for output length
+      const MAX_OUTPUT_LENGTH = 1000;
+      
       adjustView();
       
       // Check for 'code' query parameter and set decryption view if present
@@ -232,16 +229,26 @@
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
             const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
             const output = btoa(String.fromCharCode(...combined));
-            resultDiv.textContent = `Encrypted Code:\n\n${output}`;
-            QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-              if (!err) {
-                qrCodeDiv.appendChild(canvas);
-                const link = document.createElement('a');
-                link.download = 'encrypted-qr.png';
-                link.href = canvas.toDataURL();
-                link.click();
-              }
-            });
+            
+            if (output.length > MAX_OUTPUT_LENGTH) {
+              resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
+              const blob = new Blob([output], { type: 'text/plain' });
+              const link = document.createElement('a');
+              link.href = URL.createObjectURL(blob);
+              link.download = 'encrypted-output.txt';
+              link.click();
+            } else {
+              resultDiv.textContent = `Encrypted Code:\n\n${output}`;
+              QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+                if (!err) {
+                  qrCodeDiv.appendChild(canvas);
+                  const link = document.createElement('a');
+                  link.download = 'encrypted-qr.png';
+                  link.href = canvas.toDataURL();
+                  link.click();
+                }
+              });
+            }
           } else if (action === 'decrypt') {
             const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
@@ -256,7 +263,6 @@
               ["decrypt"]
             );
             const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-            // Check for file download marker (| character, ASCII 124)
             const sepIndex = new Uint8Array(decrypted).indexOf(124);
             if (sepIndex !== -1) {
               const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
@@ -308,17 +314,27 @@
           const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
           const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
           const output = btoa(String.fromCharCode(...combined));
-          resultDiv.textContent = `Encrypted Code:\n\n${output}`;
-          qrCodeDiv.innerHTML = '';
-          QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-            if (!err) {
-              qrCodeDiv.appendChild(canvas);
-              const link = document.createElement('a');
-              link.download = 'encrypted-qr.png';
-              link.href = canvas.toDataURL();
-              link.click();
-            }
-          });
+    
+          if (output.length > MAX_OUTPUT_LENGTH) {
+            resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
+            const blob = new Blob([output], { type: 'text/plain' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'encrypted-output.txt';
+            link.click();
+          } else {
+            resultDiv.textContent = `Encrypted Code:\n\n${output}`;
+            qrCodeDiv.innerHTML = '';
+            QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+              if (!err) {
+                qrCodeDiv.appendChild(canvas);
+                const link = document.createElement('a');
+                link.download = 'encrypted-qr.png';
+                link.href = canvas.toDataURL();
+                link.click();
+              }
+            });
+          }
         };
         reader.readAsArrayBuffer(fileInput.files[0]);
       });
@@ -387,6 +403,17 @@
         const cleaned = resultText.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
     
         if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
+    
+        if (cleaned.length > MAX_OUTPUT_LENGTH) {
+          const blob = new Blob([cleaned], { type: 'text/plain' });
+          const fileUrl = URL.createObjectURL(blob);
+          alert('Encrypted output is too long to share as a link. A text file has been generated for you to share.');
+          const downloadLink = document.createElement('a');
+          downloadLink.href = fileUrl;
+          downloadLink.download = 'encrypted-output.txt';
+          downloadLink.click();
+          return;
+        }
     
         const url = new URL(window.location.href);
         url.searchParams.set('code', cleaned);
