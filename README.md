@@ -1,6 +1,6 @@
 # 🔐 HexaShift (PWA)
 
-**HexaShift** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone PWA, it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**.
+**HexaShift** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, HexaShift works entirely offline.
 
 ## 🛡️ Privacy-First Philosophy
 
@@ -15,19 +15,19 @@ No logs. No identities. No dependencies.
 
 ## ✨ Features
 
-- AES-256-GCM encryption via WebCrypto API
-- PBKDF2 key derivation (150k iterations, SHA-256)
-- Custom passphrase input (numeric with commas or full alphanumeric)
-- Passphrase strength meter via zxcvbn
-- Encrypt and decrypt text **or images**
-- Automatically detect and **download decrypted image files**
-- Generate and download a QR code of the encrypted message or file
+- **AES-256-GCM** encryption via the WebCrypto API
+- **PBKDF2** key derivation (150k iterations, SHA-256)
+- Custom passphrase input with a strength meter powered by **zxcvbn**
+- Encrypt and decrypt text, images, and encrypted text files
+- **Image Encryption** with MIME type preservation and auto-download of decrypted files  
+  _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
+- Generate and download a **QR code** of the encrypted message or file (when output is within length limits)
 - Upload and decode QR codes for decryption
 - Share encrypted messages via URL (with auto-decrypt preload)
-- Reset button to clear fields and reset state
-- Copy-to-clipboard support
+- **Reset** button to clear fields and state
+- Copy-to-clipboard functionality
 - Mobile-first responsive layout
-- Fully offline PWA — installable on Android and desktop
+- Fully offline, installable PWA experience on Android and desktop
 
 ## 🔐 Passphrase Guidelines
 
@@ -39,38 +39,45 @@ You may use either:
 
 ## 🚀 How to Use
 
-1. Open `index.html` in a browser (mobile or desktop)
-2. Select **Encrypt** or **Decrypt**
-3. Enter your message or upload an image
-4. Enter your passphrase
-5. Click **Run** (or **Encrypt Image** if using a file)
-6. Copy the result, download the QR code, or share via link
-7. To decrypt, paste the encrypted string or scan/upload a QR image, and enter the correct passphrase
+1. Open `index.html` in a browser (mobile or desktop).
+2. Select one of the actions from the dropdown:
+   - **Encrypt Text**
+   - **Decrypt Text**
+   - **Decrypt Text File**
+   - **Encrypt Image**
+   - **Decrypt QR**
+3. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
+4. Enter your passphrase.
+5. Click the corresponding action button:
+   - **Run** for text encryption/decryption
+   - **Encrypt Image** for image encryption
+   - **Decode QR** for QR code decryption
+6. Review the result: copy the output, download the QR code, or share via the generated link.
+7. Use the **Reset** button to clear the form and start over.
 
-## 🖼️ File Encryption
+## 🖼️ File and Image Encryption
 
-- Upload an image (PNG, JPG, etc.)
-- HexaShift encrypts the file and includes its MIME type
-- When decrypted, the file automatically downloads in its original format
-- Perfect for secure offline image sharing
+- **Text File Decryption:** In addition to direct text input, you can upload an encrypted text file and have it decrypted automatically.
+- **Image Encryption:** Upload an image file (PNG, JPG, etc.) to encrypt. The app embeds the file’s MIME type to ensure that when decrypted, the file downloads in its original format.
+  - **File Size Limit:** Images must be **100kb or smaller**. If an image exceeds this size, an error message will be displayed in the result field.
 
 ## 🔗 URL-Based Sharing
 
 When encrypting text or files, you can generate a shareable link. Anyone with this link and the correct passphrase can decrypt the message.
 
-## ⚠️ Security Notes
+## ⚠️ Security & Connectivity Notes
 
-- All encryption is performed **client-side** — no internet required
-- **Your passphrase is never stored or transmitted**
-- Choose a strong, unique passphrase to maximize security
-- This app **does not support forward secrecy** or digital signatures
-- Designed for **anonymity and plausible deniability**, not compliance or audit logs
+- All encryption is performed **client-side** — your passphrase is never stored or transmitted.
+- **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
+- Choose a strong, unique passphrase to maximize security.
+- The app **does not support forward secrecy** or digital signatures.
+- Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
 
 - Private, secure one-off communications
 - Offline file exchanges (QR-to-QR or encrypted links)
-- Situations requiring total local control
+- Scenarios requiring total local control
 - Privacy-conscious users avoiding centralized platforms
 
 ---
