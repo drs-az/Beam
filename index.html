@@ -165,7 +165,21 @@
       document.getElementById('textFileGroup').classList.toggle('hidden', action !== 'decryptFile');
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
-      document.getElementById('runButton').classList.toggle('hidden', action === 'encryptImage' || action === 'decryptQR');
+
+      // Toggle buttons based on action for UI clarity:
+      if (action === 'encryptImage') {
+        document.getElementById('runButton').classList.add('hidden');
+        document.getElementById('encryptImage').classList.remove('hidden');
+        document.getElementById('decodeQR').classList.add('hidden');
+      } else if (action === 'decryptQR') {
+        document.getElementById('runButton').classList.add('hidden');
+        document.getElementById('encryptImage').classList.add('hidden');
+        document.getElementById('decodeQR').classList.remove('hidden');
+      } else {
+        document.getElementById('runButton').classList.remove('hidden');
+        document.getElementById('encryptImage').classList.add('hidden');
+        document.getElementById('decodeQR').classList.add('hidden');
+      }
     }
     
     function togglePasswordVisibility() { 
@@ -200,6 +214,9 @@
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
+      // Global TextEncoder instance available to all handlers
+      const enc = new TextEncoder();
+      
       adjustView();
       
       // Check for 'code' query parameter and set decryption view if present
@@ -218,8 +235,6 @@
         const qrCodeDiv = document.getElementById('qrcode'); 
         qrCodeDiv.innerHTML = ''; 
         if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
-    
-        const enc = new TextEncoder();
     
         try {
           if (action === 'encryptText') {
@@ -342,7 +357,7 @@
         reader.onload = async function () {
           const arrayBuffer = reader.result;
           const mimeType = fileInput.files[0].type;
-          const prefix = new TextEncoder().encode(mimeType + '|');
+          const prefix = enc.encode(mimeType + '|');
           const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
           fullBuffer.set(prefix, 0);
           fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
