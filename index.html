@@ -105,12 +105,22 @@
   <div class="container">
     <h1>HexaShift 🔐</h1>
     <label for="action">Select Action:</label>
-    <select id="action" onchange="adjustView()"><option value="encryptText">Encrypt Text</option><option value="decrypt">Decrypt Text/File</option><option value="encryptImage">Encrypt Image</option><option value="decryptQR">Decrypt QR</option>
+    <select id="action" onchange="adjustView()">
+      <option value="encryptText">Encrypt Text</option>
+      <option value="decrypt">Decrypt Text</option>
+      <option value="decryptFile">Decrypt Text File</option>
+      <option value="encryptImage">Encrypt Image</option>
+      <option value="decryptQR">Decrypt QR</option>
     </select>
     
     <div id="messageGroup">
       <label for="message">Message / Encrypted Code:</label>
       <textarea id="message" rows="4" placeholder="Enter your message or paste an encrypted code..."></textarea>
+    </div>
+    
+    <div id="textFileGroup" class="hidden">
+      <label for="fileInput">Upload Encrypted Text File:</label>
+      <input type="file" id="fileInput" accept=".txt">
     </div>
     
     <div id="imageGroup" class="hidden">
@@ -147,9 +157,12 @@
   </div>
   
   <script>
+    const MAX_OUTPUT_LENGTH = 1000;
+    
     function adjustView() {
       const action = document.getElementById('action').value;
       document.getElementById('messageGroup').classList.toggle('hidden', action !== 'encryptText' && action !== 'decrypt');
+      document.getElementById('textFileGroup').classList.toggle('hidden', action !== 'decryptFile');
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
       document.getElementById('runButton').classList.toggle('hidden', action === 'encryptImage' || action === 'decryptQR');
@@ -177,6 +190,9 @@
       document.getElementById('action').value = 'encryptText'; 
       adjustView(); 
       document.getElementById('message').value = ''; 
+      document.getElementById('fileInput').value = '';
+      document.getElementById('imageInput').value = '';
+      document.getElementById('qrInput').value = '';
       document.getElementById('key').value = ''; 
       document.getElementById('result').textContent = ''; 
       document.getElementById('strength').textContent = ''; 
@@ -184,9 +200,6 @@
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
-      // Set an upper limit for output length
-      const MAX_OUTPUT_LENGTH = 1000;
-      
       adjustView();
       
       // Check for 'code' query parameter and set decryption view if present
@@ -198,10 +211,8 @@
         adjustView();
       }
     
-      // Run button for text encryption/decryption
       document.getElementById('runButton').addEventListener('click', async () => { 
         const action = document.getElementById('action').value; 
-        const message = document.getElementById('message').value; 
         const passphrase = document.getElementById('key').value.trim(); 
         const resultDiv = document.getElementById('result'); 
         const qrCodeDiv = document.getElementById('qrcode'); 
@@ -209,19 +220,20 @@
         if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
     
         const enc = new TextEncoder();
-        const salt = crypto.getRandomValues(new Uint8Array(16));
-        const iv = crypto.getRandomValues(new Uint8Array(12));
-        const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-        const key = await crypto.subtle.deriveKey(
-          { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-          keyMaterial,
-          { name: "AES-GCM", length: 256 },
-          false,
-          ["encrypt", "decrypt"]
-        );
     
         try {
           if (action === 'encryptText') {
+            const message = document.getElementById('message').value; 
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+            const key = await crypto.subtle.deriveKey(
+              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+              keyMaterial,
+              { name: "AES-GCM", length: 256 },
+              false,
+              ["encrypt", "decrypt"]
+            );
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
             const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
             const output = btoa(String.fromCharCode(...combined));
@@ -246,6 +258,7 @@
               });
             }
           } else if (action === 'decrypt') {
+            const message = document.getElementById('message').value; 
             const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
             const iv = data.slice(16, 28);
@@ -272,13 +285,51 @@
             } else {
               resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
             }
+          } else if (action === 'decryptFile') {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.files[0]) return alert('Please upload a text file.');
+            const reader = new FileReader();
+            reader.onload = async function () {
+              const fileContent = reader.result.trim();
+              try {
+                const data = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
+                const salt = data.slice(0, 16);
+                const iv = data.slice(16, 28);
+                const ciphertext = data.slice(28);
+                const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+                const key = await crypto.subtle.deriveKey(
+                  { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+                  keyMaterial,
+                  { name: "AES-GCM", length: 256 },
+                  false,
+                  ["decrypt"]
+                );
+                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+                const sepIndex = new Uint8Array(decrypted).indexOf(124);
+                if (sepIndex !== -1) {
+                  const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
+                  const content = new Uint8Array(decrypted).slice(sepIndex + 1);
+                  const blob = new Blob([content], { type: mime });
+                  const link = document.createElement('a');
+                  link.href = URL.createObjectURL(blob);
+                  link.download = 'decrypted-file';
+                  link.click();
+                  resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
+                } else {
+                  resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+                }
+              } catch (err) {
+                resultDiv.textContent = 'Error: ' + err.message;
+              }
+            };
+            reader.readAsText(fileInput.files[0]);
           }
         } catch (err) {
           resultDiv.textContent = 'Error: ' + err.message;
         }
       });
     
-      // Encrypt image button handler
+      // Encrypt Image button handler
       document.getElementById('encryptImage').addEventListener('click', async () => { 
         const fileInput = document.getElementById('imageInput'); 
         const resultDiv = document.getElementById('result'); 
@@ -296,7 +347,6 @@
           fullBuffer.set(prefix, 0);
           fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
     
-          const enc = new TextEncoder();
           const salt = crypto.getRandomValues(new Uint8Array(16));
           const iv = crypto.getRandomValues(new Uint8Array(12));
           const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
@@ -357,7 +407,6 @@
             if (!code) return alert('QR code could not be read.');
     
             try {
-              const enc = new TextEncoder();
               const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
               const salt = data.slice(0, 16);
               const iv = data.slice(16, 28);
@@ -401,35 +450,4 @@
         if (!cleaned) return alert('Nothing to share yet! Please encrypt a message first.');
     
         if (cleaned.length > MAX_OUTPUT_LENGTH) {
-          const blob = new Blob([cleaned], { type: 'text/plain' });
-          const fileUrl = URL.createObjectURL(blob);
-          alert('Encrypted output is too long to share as a link. A text file has been generated for you to share.');
-          const downloadLink = document.createElement('a');
-          downloadLink.href = fileUrl;
-          downloadLink.download = 'encrypted-output.txt';
-          downloadLink.click();
-          return;
-        }
-    
-        const url = new URL(window.location.href);
-        url.searchParams.set('code', cleaned);
-    
-        const shareData = {
-          title: 'Encrypted Message',
-          text: `Here's my secure encrypted message:\n\n${url.toString()}`,
-        };
-    
-        if (navigator.share) {
-          try {
-            await navigator.share(shareData);
-          } catch (err) {
-            alert('Sharing failed: ' + err.message);
-          }
-        } else {
-          alert('Sharing not supported on this device.');
-        }
-      });
-    });
-  </script>
-</body>
-</html>
+          const blob = new Blob([cleaned], { type: 'text/plain' })
