@@ -111,8 +111,8 @@
     </div>
   </div>
 
-  <!-- Include html5-qrcode library -->
-  <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+  <!-- Include html5-qrcode library from a known version -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
   <script>
     let scannedEncryptionCode = "";
     const scanQrBtn = document.getElementById('scanQrBtn');
@@ -176,9 +176,9 @@
       try {
         // Request camera access explicitly
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        // If access is granted, stop the stream (we'll let html5-qrcode reinitialize it)
+        // Stop the stream immediately so html5-qrcode can reinitialize it
         stream.getTracks().forEach(track => track.stop());
-        // Clear any previous output and show QR reader container
+        // Clear any previous output and show the QR reader container
         outputDiv.textContent = "";
         qrReaderElem.style.display = "block";
         // Initialize scanner with a 250px square scan area and 10 FPS
