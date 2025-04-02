@@ -173,32 +173,40 @@
     // Setup QR scanning using html5-qrcode
     let html5QrcodeScanner;
     scanQrBtn.addEventListener('click', () => {
-      // Clear any previous output
-      outputDiv.textContent = "";
-      // Show QR reader container
-      qrReaderElem.style.display = "block";
-      // Initialize scanner with a 250px square scan area and 10 FPS
-      html5QrcodeScanner = new Html5Qrcode("qr-reader");
-      const config = { fps: 10, qrbox: 250 };
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText, decodedResult) => {
-          // On successful scan, stop scanning and store the encrypted code
-          scannedEncryptionCode = decodedText;
-          html5QrcodeScanner.stop().then(() => {
-            qrReaderElem.style.display = "none";
-            openModal();
-          }).catch(err => {
-            console.error("Error stopping scanner: ", err);
-          });
-        },
-        (errorMessage) => {
-          // Optionally log scan errors
-          console.log("QR Scan Error: " + errorMessage);
-        }
-      ).catch(err => {
-        console.error("Unable to start scanning: ", err);
+      // Request camera access explicitly
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(stream => {
+        // If access is granted, stop the stream (we'll let html5-qrcode reinitialize it)
+        stream.getTracks().forEach(track => track.stop());
+        // Clear any previous output and show QR reader container
+        outputDiv.textContent = "";
+        qrReaderElem.style.display = "block";
+        // Initialize scanner with a 250px square scan area and 10 FPS
+        html5QrcodeScanner = new Html5Qrcode("qr-reader");
+        const config = { fps: 10, qrbox: 250 };
+        html5QrcodeScanner.start(
+          { facingMode: "environment" },
+          config,
+          (decodedText, decodedResult) => {
+            // On successful scan, stop scanning and store the encrypted code
+            scannedEncryptionCode = decodedText;
+            html5QrcodeScanner.stop().then(() => {
+              qrReaderElem.style.display = "none";
+              openModal();
+            }).catch(err => {
+              console.error("Error stopping scanner: ", err);
+            });
+          },
+          (errorMessage) => {
+            console.log("QR Scan Error: " + errorMessage);
+          }
+        ).catch(err => {
+          console.error("Unable to start scanning: ", err);
+        });
+      })
+      .catch(err => {
+        console.error("Camera access denied: ", err);
+        alert("Camera access is required to scan QR codes.");
       });
     });
 
