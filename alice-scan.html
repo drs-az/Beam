@@ -172,10 +172,10 @@
 
     // Setup QR scanning using html5-qrcode
     let html5QrcodeScanner;
-    scanQrBtn.addEventListener('click', () => {
-      // Request camera access explicitly
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-      .then(stream => {
+    scanQrBtn.addEventListener('click', async () => {
+      try {
+        // Request camera access explicitly
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         // If access is granted, stop the stream (we'll let html5-qrcode reinitialize it)
         stream.getTracks().forEach(track => track.stop());
         // Clear any previous output and show QR reader container
@@ -184,7 +184,7 @@
         // Initialize scanner with a 250px square scan area and 10 FPS
         html5QrcodeScanner = new Html5Qrcode("qr-reader");
         const config = { fps: 10, qrbox: 250 };
-        html5QrcodeScanner.start(
+        await html5QrcodeScanner.start(
           { facingMode: "environment" },
           config,
           (decodedText, decodedResult) => {
@@ -200,14 +200,11 @@
           (errorMessage) => {
             console.log("QR Scan Error: " + errorMessage);
           }
-        ).catch(err => {
-          console.error("Unable to start scanning: ", err);
-        });
-      })
-      .catch(err => {
-        console.error("Camera access denied: ", err);
-        alert("Camera access is required to scan QR codes.");
-      });
+        );
+      } catch (err) {
+        console.error("Camera access error: ", err);
+        alert("Camera access is required to scan QR codes. Error: " + err.message);
+      }
     });
 
     // Modal functions
