@@ -1,0 +1,13 @@
+{
+  "name": "sset",
+  "version": "1.0.0",
+  "description": "**HexaShift** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, HexaShift works entirely offline.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module"
+}

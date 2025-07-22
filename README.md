@@ -80,6 +80,15 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 - Scenarios requiring total local control
 - Privacy-conscious users avoiding centralized platforms
 
+## ✅ Running Tests
+
+This project uses the built-in Node.js test runner. After cloning the repo, run:
+
+```bash
+npm install
+npm test
+```
+
 ---
 
 Made with ❤️ in 🌵 for the privacy-minded.  
