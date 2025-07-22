@@ -33,6 +33,7 @@
   <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js" defer></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/argon2-browser/dist/argon2-bundled.min.js" defer></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -136,6 +137,11 @@
     <label for="key">Passphrase:</label>
     <input type="password" id="key" oninput="checkStrength()" placeholder="Enter your passphrase">
     <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
+    <label for="kdf" style="margin-top:1rem;">Key Derivation:</label>
+    <select id="kdf">
+      <option value="pbkdf2" selected>PBKDF2</option>
+      <option value="argon2id">Argon2id</option>
+    </select>
     <div id="strength"></div>
     
     <div class="tools" style="margin-top: 10px;">
@@ -200,17 +206,43 @@
       navigator.clipboard.writeText(cleaned).then(() => alert('Copied!')); 
     }
     
-    function resetForm() { 
-      document.getElementById('action').value = 'encryptText'; 
-      adjustView(); 
-      document.getElementById('message').value = ''; 
+    function resetForm() {
+      document.getElementById('action').value = 'encryptText';
+      adjustView();
+      document.getElementById('message').value = '';
       document.getElementById('fileInput').value = '';
       document.getElementById('imageInput').value = '';
       document.getElementById('qrInput').value = '';
       document.getElementById('key').value = ''; 
       document.getElementById('result').textContent = ''; 
       document.getElementById('strength').textContent = ''; 
-      document.getElementById('qrcode').innerHTML = ''; 
+      document.getElementById('qrcode').innerHTML = '';
+    }
+
+    async function deriveAesKey(passphrase, salt, usages) {
+      const kdf = document.getElementById('kdf').value;
+      if (kdf === 'argon2id') {
+        const { hashHex } = await argon2.hash({
+          pass: passphrase,
+          salt,
+          time: 3,
+          mem: 64 * 1024,
+          parallelism: 1,
+          hashLen: 32,
+          type: argon2.ArgonType.Argon2id
+        });
+        const keyBytes = Uint8Array.from(hashHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+        return crypto.subtle.importKey('raw', keyBytes, { name: 'AES-GCM' }, false, usages);
+      }
+      const enc = new TextEncoder();
+      const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+      return crypto.subtle.deriveKey(
+        { name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        usages
+      );
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
@@ -241,14 +273,7 @@
             const message = document.getElementById('message').value; 
             const salt = crypto.getRandomValues(new Uint8Array(16));
             const iv = crypto.getRandomValues(new Uint8Array(12));
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["encrypt", "decrypt"]
-            );
+            const key = await deriveAesKey(passphrase, salt, ["encrypt", "decrypt"]);
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
             const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
             const output = btoa(String.fromCharCode(...combined));
@@ -278,14 +303,7 @@
             const salt = data.slice(0, 16);
             const iv = data.slice(16, 28);
             const ciphertext = data.slice(28);
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["decrypt"]
-            );
+            const key = await deriveAesKey(passphrase, salt, ["decrypt"]);
             const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
             const sepIndex = new Uint8Array(decrypted).indexOf(124);
             if (sepIndex !== -1) {
@@ -311,14 +329,7 @@
                 const salt = data.slice(0, 16);
                 const iv = data.slice(16, 28);
                 const ciphertext = data.slice(28);
-                const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-                const key = await crypto.subtle.deriveKey(
-                  { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                  keyMaterial,
-                  { name: "AES-GCM", length: 256 },
-                  false,
-                  ["decrypt"]
-                );
+                const key = await deriveAesKey(passphrase, salt, ["decrypt"]);
                 const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
                 const sepIndex = new Uint8Array(decrypted).indexOf(124);
                 if (sepIndex !== -1) {
@@ -371,14 +382,7 @@
       
       const salt = crypto.getRandomValues(new Uint8Array(16));
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"]
-      );
+      const key = await deriveAesKey(passphrase, salt, ["encrypt"]);
       const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
       const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
       const output = btoa(String.fromCharCode(...combined));
@@ -433,14 +437,7 @@
               const salt = data.slice(0, 16);
               const iv = data.slice(16, 28);
               const ciphertext = data.slice(28);
-              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-              const key = await crypto.subtle.deriveKey(
-                { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["decrypt"]
-              );
+              const key = await deriveAesKey(passphrase, salt, ["decrypt"]);
               const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
               const sepIndex = new Uint8Array(decrypted).indexOf(124);
               if (sepIndex !== -1) {

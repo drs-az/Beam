@@ -17,6 +17,7 @@ No logs. No identities. No dependencies.
 
 - **AES-256-GCM** encryption via the WebCrypto API
 - **PBKDF2** key derivation (150k iterations, SHA-256)
+- Optional **Argon2id** key derivation (64MB memory, 3 iterations)
 - Custom passphrase input with a strength meter powered by **zxcvbn**
 - Encrypt and decrypt text, images, and encrypted text files
 - **Image Encryption** with MIME type preservation and auto-download of decrypted files  
@@ -28,6 +29,12 @@ No logs. No identities. No dependencies.
 - Copy-to-clipboard functionality
 - Mobile-first responsive layout
 - Fully offline, installable PWA experience on Android and desktop
+
+## 🔑 Key Derivation Options
+
+Use the dropdown beneath the passphrase field to select **PBKDF2** or **Argon2id**.
+Argon2id employs 64MB of memory and 3 iterations for strong resistance
+to brute-force attacks.
 
 ## 🔐 Passphrase Guidelines
 
@@ -70,6 +77,7 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
 - **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
 - Choose a strong, unique passphrase to maximize security.
+- Using **Argon2id** greatly increases CPU and memory usage (64MB by default). Expect slower operations on low-powered devices.
 - The app **does not support forward secrecy** or digital signatures.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
