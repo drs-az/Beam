@@ -33,6 +33,14 @@
   <script src="libs/zxcvbn.js" defer></script>
   <script src="libs/qrcode.min.js" defer></script>
   <script src="libs/jsQR.js" defer></script>
+  <script src="libs/argon2-bundled.js" defer></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('sw.js').catch(console.error);
+        });
+      }
+    </script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -135,8 +143,10 @@
     
     <label for="key">Passphrase:</label>
     <input type="password" id="key" oninput="checkStrength()" placeholder="Enter your passphrase">
-    <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
-    <div id="strength"></div>
+      <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
+      <div id="strength"></div>
+      <label><input type="checkbox" id="hmacToggle"> Add HMAC for tamper detection</label>
+      <label><input type="checkbox" id="argonToggle"> Use Argon2 key derivation (slower)</label>
     
     <div class="tools" style="margin-top: 10px;">
       <button id="runButton">Run</button>
@@ -216,6 +226,42 @@
     document.addEventListener('DOMContentLoaded', () => { 
       // Global TextEncoder instance available to all handlers
       const enc = new TextEncoder();
+
+      async function deriveAesKey(passphrase, salt, useArgon, usage) {
+        if (useArgon && window.argon2 && argon2.hash) {
+          const { hash } = await argon2.hash({
+            pass: passphrase,
+            salt,
+            time: 3,
+            mem: 65536,
+            hashLen: 32,
+            parallelism: 1,
+            type: argon2.ArgonType.Argon2id,
+            raw: true
+          });
+          return crypto.subtle.importKey('raw', hash, 'AES-GCM', false, usage);
+        }
+        const material = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, usage);
+      }
+
+      async function deriveHmacKey(passphrase, salt, useArgon) {
+        if (useArgon && window.argon2 && argon2.hash) {
+          const { hash } = await argon2.hash({
+            pass: passphrase,
+            salt,
+            time: 3,
+            mem: 65536,
+            hashLen: 32,
+            parallelism: 1,
+            type: argon2.ArgonType.Argon2id,
+            raw: true
+          });
+          return crypto.subtle.importKey('raw', hash, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign', 'verify']);
+        }
+        const material = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveKey']);
+        return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: 150000, hash: 'SHA-256' }, material, { name: 'HMAC', hash: 'SHA-256', length: 256 }, false, ['sign', 'verify']);
+      }
       
       adjustView();
       
@@ -230,7 +276,9 @@
     
       document.getElementById('runButton').addEventListener('click', async () => { 
         const action = document.getElementById('action').value; 
-        const passphrase = document.getElementById('key').value.trim(); 
+        const passphrase = document.getElementById('key').value.trim();
+        const useHmac = document.getElementById('hmacToggle').checked;
+        const useArgon = document.getElementById('argonToggle').checked;
         const resultDiv = document.getElementById('result'); 
         const qrCodeDiv = document.getElementById('qrcode'); 
         qrCodeDiv.innerHTML = ''; 
@@ -238,19 +286,17 @@
     
         try {
           if (action === 'encryptText') {
-            const message = document.getElementById('message').value; 
+            const message = document.getElementById('message').value;
             const salt = crypto.getRandomValues(new Uint8Array(16));
             const iv = crypto.getRandomValues(new Uint8Array(12));
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["encrypt", "decrypt"]
-            );
+            const key = await deriveAesKey(passphrase, salt, useArgon, ["encrypt", "decrypt"]);
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
-            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+            let mac = new Uint8Array();
+            if (useHmac) {
+              const hmacKey = await deriveHmacKey(passphrase, salt, useArgon);
+              mac = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, ciphertext));
+            }
+            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext), ...mac]);
             const output = btoa(String.fromCharCode(...combined));
             
             if (output.length > MAX_OUTPUT_LENGTH) {
@@ -273,19 +319,21 @@
               });
             }
           } else if (action === 'decrypt') {
-            const message = document.getElementById('message').value; 
+            const message = document.getElementById('message').value;
             const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
             const iv = data.slice(16, 28);
-            const ciphertext = data.slice(28);
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["decrypt"]
-            );
+            const ciphertext = useHmac ? data.slice(28, data.length - 32) : data.slice(28);
+            const mac = useHmac ? data.slice(data.length - 32) : null;
+            const key = await deriveAesKey(passphrase, salt, useArgon, ["decrypt"]);
+            if (useHmac) {
+              const hmacKey = await deriveHmacKey(passphrase, salt, useArgon);
+              const expected = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, ciphertext));
+              const macArr = new Uint8Array(mac);
+              if (expected.length !== macArr.length || expected.some((b, i) => b !== macArr[i])) {
+                throw new Error('HMAC verification failed');
+              }
+            }
             const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
             const sepIndex = new Uint8Array(decrypted).indexOf(124);
             if (sepIndex !== -1) {
@@ -310,15 +358,17 @@
                 const data = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
                 const salt = data.slice(0, 16);
                 const iv = data.slice(16, 28);
-                const ciphertext = data.slice(28);
-                const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-                const key = await crypto.subtle.deriveKey(
-                  { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                  keyMaterial,
-                  { name: "AES-GCM", length: 256 },
-                  false,
-                  ["decrypt"]
-                );
+                const ciphertext = useHmac ? data.slice(28, data.length - 32) : data.slice(28);
+                const mac = useHmac ? data.slice(data.length - 32) : null;
+                const key = await deriveAesKey(passphrase, salt, useArgon, ["decrypt"]);
+                if (useHmac) {
+                  const hmacKey = await deriveHmacKey(passphrase, salt, useArgon);
+                  const expected = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, ciphertext));
+                  const macArr = new Uint8Array(mac);
+                  if (expected.length !== macArr.length || expected.some((b, i) => b !== macArr[i])) {
+                    throw new Error('HMAC verification failed');
+                  }
+                }
                 const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
                 const sepIndex = new Uint8Array(decrypted).indexOf(124);
                 if (sepIndex !== -1) {
@@ -349,7 +399,9 @@
     const fileInput = document.getElementById('imageInput'); 
     const resultDiv = document.getElementById('result'); 
     const qrCodeDiv = document.getElementById('qrcode'); 
-    const passphrase = document.getElementById('key').value.trim(); 
+    const passphrase = document.getElementById('key').value.trim();
+    const useHmac = document.getElementById('hmacToggle').checked;
+    const useArgon = document.getElementById('argonToggle').checked;
     if (!fileInput.files[0]) return alert('Please upload an image.'); 
 
     // Check if the image file size exceeds 100kb (100 * 1024 bytes)
@@ -371,16 +423,14 @@
       
       const salt = crypto.getRandomValues(new Uint8Array(16));
       const iv = crypto.getRandomValues(new Uint8Array(12));
-      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"]
-      );
+      const key = await deriveAesKey(passphrase, salt, useArgon, ["encrypt"]);
       const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
-      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+      let mac = new Uint8Array();
+      if (useHmac) {
+        const hmacKey = await deriveHmacKey(passphrase, salt, useArgon);
+        mac = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, ciphertext));
+      }
+      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext), ...mac]);
       const output = btoa(String.fromCharCode(...combined));
       
       if (output.length > 1000) {
@@ -410,8 +460,9 @@
       // Decode QR button handler
       document.getElementById('decodeQR').addEventListener('click', async () => { 
         const fileInput = document.getElementById('qrInput'); 
-        const passphrase = document.getElementById('key').value.trim(); 
-        const resultDiv = document.getElementById('result'); 
+        const passphrase = document.getElementById('key').value.trim();
+        const useHmac = document.getElementById('hmacToggle').checked;
+        const resultDiv = document.getElementById('result');
         if (!fileInput.files[0]) return alert('Please upload a QR code image.'); 
         if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
     
@@ -432,15 +483,17 @@
               const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
               const salt = data.slice(0, 16);
               const iv = data.slice(16, 28);
-              const ciphertext = data.slice(28);
-              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-              const key = await crypto.subtle.deriveKey(
-                { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["decrypt"]
-              );
+              const ciphertext = useHmac ? data.slice(28, data.length - 32) : data.slice(28);
+              const mac = useHmac ? data.slice(data.length - 32) : null;
+              const key = await deriveAesKey(passphrase, salt, useArgon, ["decrypt"]);
+              if (useHmac) {
+                const hmacKey = await deriveHmacKey(passphrase, salt, useArgon);
+                const expected = new Uint8Array(await crypto.subtle.sign('HMAC', hmacKey, ciphertext));
+                const macArr = new Uint8Array(mac);
+                if (expected.length !== macArr.length || expected.some((b, i) => b !== macArr[i])) {
+                  throw new Error('HMAC verification failed');
+                }
+              }
               const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
               const sepIndex = new Uint8Array(decrypted).indexOf(124);
               if (sepIndex !== -1) {
