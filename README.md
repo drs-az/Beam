@@ -68,7 +68,7 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
-- **Offline Functionality:** All dependencies (zxcvbn, qrcode, jsQR) are bundled in the `libs/` folder, so the app runs fully offline.
+- **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
 - Choose a strong, unique passphrase to maximize security.
 - The app **does not support forward secrecy** or digital signatures.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
