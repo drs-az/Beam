@@ -17,10 +17,12 @@ No logs. No identities. No dependencies.
 
 - **AES-256-GCM** encryption via the WebCrypto API
 - **PBKDF2** key derivation (150k iterations, SHA-256)
+- Optional **Argon2** key derivation for stronger but slower hashing
+- Optional **HMAC** authentication to detect tampering
 - Custom passphrase input with a strength meter powered by **zxcvbn**
 - Encrypt and decrypt text, images, and encrypted text files
-- **Image Encryption** with MIME type preservation and auto-download of decrypted files  
-  _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
+- **Image Encryption** with MIME type preservation and auto-download of decrypted files
+  _Images larger than 100kb are automatically chunked for encryption._
 - Generate and download a **QR code** of the encrypted message or file (when output is within length limits)
 - Upload and decode QR codes for decryption
 - Share encrypted messages via URL (with auto-decrypt preload)
@@ -46,7 +48,7 @@ You may use either:
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
-3. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
+3. For encryption, enter your message or upload an image. Large images are automatically split into 100kb chunks. For decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
 4. Enter your passphrase.
 5. Click the corresponding action button:
    - **Run** for text encryption/decryption
@@ -59,7 +61,7 @@ You may use either:
 
 - **Text File Decryption:** In addition to direct text input, you can upload an encrypted text file and have it decrypted automatically.
 - **Image Encryption:** Upload an image file (PNG, JPG, etc.) to encrypt. The app embeds the file’s MIME type to ensure that when decrypted, the file downloads in its original format.
-  - **File Size Limit:** Images must be **100kb or smaller**. If an image exceeds this size, an error message will be displayed in the result field.
+  - **File Size Handling:** Images larger than 100kb are encrypted in chunks so they can be decrypted and reassembled later.
 
 ## 🔗 URL-Based Sharing
 
@@ -68,9 +70,11 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
-- **Offline Functionality:** All dependencies (zxcvbn, qrcode, jsQR) are bundled in the `libs/` folder, so the app runs fully offline.
+- **Offline Functionality:** All dependencies (zxcvbn, qrcode, jsQR, argon2) are bundled in the `libs/` folder. A service worker caches app files after the first visit, so HexaShift works offline.
 - Choose a strong, unique passphrase to maximize security.
 - The app **does not support forward secrecy** or digital signatures.
+- When enabled, HMAC verifies integrity of the ciphertext before decryption.
+- Argon2 hashing may take a few seconds on slower devices.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
@@ -79,6 +83,14 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 - Offline file exchanges (QR-to-QR or encrypted links)
 - Scenarios requiring total local control
 - Privacy-conscious users avoiding centralized platforms
+
+## 🧪 Running Tests
+
+HexaShift includes a small Jest test suite. Install dependencies with `npm install` and run tests using:
+
+```bash
+npm test
+```
 
 ---
 
