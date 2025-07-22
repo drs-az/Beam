@@ -17,6 +17,8 @@ No logs. No identities. No dependencies.
 
 - **AES-256-GCM** encryption via the WebCrypto API
 - **PBKDF2** key derivation (150k iterations, SHA-256)
+- Optional **Argon2** key derivation for stronger but slower hashing
+- Optional **HMAC** authentication to detect tampering
 - Custom passphrase input with a strength meter powered by **zxcvbn**
 - Encrypt and decrypt text, images, and encrypted text files
 - **Image Encryption** with MIME type preservation and auto-download of decrypted files  
@@ -68,9 +70,11 @@ When encrypting text or files, you can generate a shareable link. Anyone with th
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
-- **Offline Functionality:** All dependencies (zxcvbn, qrcode, jsQR) are bundled in the `libs/` folder, so the app runs fully offline.
+- **Offline Functionality:** All dependencies (zxcvbn, qrcode, jsQR, argon2) are bundled in the `libs/` folder. A service worker caches app files after the first visit, so HexaShift works offline.
 - Choose a strong, unique passphrase to maximize security.
 - The app **does not support forward secrecy** or digital signatures.
+- When enabled, HMAC verifies integrity of the ciphertext before decryption.
+- Argon2 hashing may take a few seconds on slower devices.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
