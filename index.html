@@ -158,6 +158,64 @@
   
   <script>
     const MAX_OUTPUT_LENGTH = 1000;
+    const CHUNK_SIZE = 700; // bytes per encrypted chunk to keep QR manageable
+    let qrParts = [];
+
+    async function encryptDataBytes(bytes, passphrase) {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, bytes);
+      return new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+    }
+
+    async function decryptDataBytes(bytes, passphrase) {
+      const salt = bytes.slice(0, 16);
+      const iv = bytes.slice(16, 28);
+      const ciphertext = bytes.slice(28);
+      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["decrypt"]
+      );
+      return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext));
+    }
+
+    async function encryptChunks(bytes, passphrase) {
+      const total = Math.ceil(bytes.length / CHUNK_SIZE);
+      const parts = [];
+      for (let i = 0; i < total; i++) {
+        const chunk = bytes.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const encrypted = await encryptDataBytes(chunk, passphrase);
+        const base64 = btoa(String.fromCharCode(...encrypted));
+        parts.push(`${i + 1}/${total}:${base64}`);
+      }
+      return parts;
+    }
+
+    async function decryptChunks(partStrings, passphrase) {
+      const parts = [];
+      for (const str of partStrings) {
+        const trimmed = str.trim();
+        if (!trimmed) continue;
+        const [meta, data] = trimmed.includes(':') ? trimmed.split(':') : ['1/1', trimmed];
+        const [index] = meta.split('/');
+        const bytes = Uint8Array.from(atob(data), c => c.charCodeAt(0));
+        const decrypted = await decryptDataBytes(bytes, passphrase);
+        parts[parseInt(index) - 1] = Array.from(decrypted);
+      }
+      return new Uint8Array(parts.flat());
+    }
     
     function adjustView() {
       const action = document.getElementById('action').value;
@@ -238,22 +296,11 @@
     
         try {
           if (action === 'encryptText') {
-            const message = document.getElementById('message').value; 
-            const salt = crypto.getRandomValues(new Uint8Array(16));
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["encrypt", "decrypt"]
-            );
-            const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
-            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-            const output = btoa(String.fromCharCode(...combined));
-            
-            if (output.length > MAX_OUTPUT_LENGTH) {
+            const message = document.getElementById('message').value;
+            const parts = await encryptChunks(enc.encode(message), passphrase);
+            const output = parts.join('\n');
+
+            if (parts.some(p => p.length > MAX_OUTPUT_LENGTH)) {
               resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
               const blob = new Blob([output], { type: 'text/plain' });
               const link = document.createElement('a');
@@ -262,35 +309,26 @@
               link.click();
             } else {
               resultDiv.textContent = `Encrypted Code:\n\n${output}`;
-              QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-                if (!err) {
-                  qrCodeDiv.appendChild(canvas);
-                  const link = document.createElement('a');
-                  link.download = 'encrypted-qr.png';
-                  link.href = canvas.toDataURL();
-                  link.click();
-                }
+              parts.forEach(part => {
+                QRCode.toCanvas(document.createElement('canvas'), part, (err, canvas) => {
+                  if (!err) {
+                    qrCodeDiv.appendChild(canvas);
+                    const link = document.createElement('a');
+                    link.download = 'encrypted-qr.png';
+                    link.href = canvas.toDataURL();
+                    link.click();
+                  }
+                });
               });
             }
           } else if (action === 'decrypt') {
-            const message = document.getElementById('message').value; 
-            const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
-            const salt = data.slice(0, 16);
-            const iv = data.slice(16, 28);
-            const ciphertext = data.slice(28);
-            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-            const key = await crypto.subtle.deriveKey(
-              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-              keyMaterial,
-              { name: "AES-GCM", length: 256 },
-              false,
-              ["decrypt"]
-            );
-            const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-            const sepIndex = new Uint8Array(decrypted).indexOf(124);
+            const message = document.getElementById('message').value.trim();
+            const parts = message.split(/\r?\n/).filter(Boolean);
+            const decryptedBytes = await decryptChunks(parts, passphrase);
+            const sepIndex = decryptedBytes.indexOf(124);
             if (sepIndex !== -1) {
-              const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
-              const content = new Uint8Array(decrypted).slice(sepIndex + 1);
+              const mime = new TextDecoder().decode(decryptedBytes.slice(0, sepIndex));
+              const content = decryptedBytes.slice(sepIndex + 1);
               const blob = new Blob([content], { type: mime });
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
@@ -298,7 +336,7 @@
               link.click();
               resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
             } else {
-              resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+              resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decryptedBytes)}`;
             }
           } else if (action === 'decryptFile') {
             const fileInput = document.getElementById('fileInput');
@@ -307,23 +345,12 @@
             reader.onload = async function () {
               const fileContent = reader.result.trim();
               try {
-                const data = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
-                const salt = data.slice(0, 16);
-                const iv = data.slice(16, 28);
-                const ciphertext = data.slice(28);
-                const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-                const key = await crypto.subtle.deriveKey(
-                  { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                  keyMaterial,
-                  { name: "AES-GCM", length: 256 },
-                  false,
-                  ["decrypt"]
-                );
-                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-                const sepIndex = new Uint8Array(decrypted).indexOf(124);
+                const parts = fileContent.split(/\r?\n/).filter(Boolean);
+                const decryptedBytes = await decryptChunks(parts, passphrase);
+                const sepIndex = decryptedBytes.indexOf(124);
                 if (sepIndex !== -1) {
-                  const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
-                  const content = new Uint8Array(decrypted).slice(sepIndex + 1);
+                  const mime = new TextDecoder().decode(decryptedBytes.slice(0, sepIndex));
+                  const content = decryptedBytes.slice(sepIndex + 1);
                   const blob = new Blob([content], { type: mime });
                   const link = document.createElement('a');
                   link.href = URL.createObjectURL(blob);
@@ -331,7 +358,7 @@
                   link.click();
                   resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
                 } else {
-                  resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+                  resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decryptedBytes)}`;
                 }
               } catch (err) {
                 resultDiv.textContent = 'Error: ' + err.message;
@@ -368,22 +395,11 @@
       const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
       fullBuffer.set(prefix, 0);
       fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
-      
-      const salt = crypto.getRandomValues(new Uint8Array(16));
-      const iv = crypto.getRandomValues(new Uint8Array(12));
-      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-      const key = await crypto.subtle.deriveKey(
-        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-        keyMaterial,
-        { name: "AES-GCM", length: 256 },
-        false,
-        ["encrypt"]
-      );
-      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
-      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-      const output = btoa(String.fromCharCode(...combined));
-      
-      if (output.length > 1000) {
+
+      const parts = await encryptChunks(fullBuffer, passphrase);
+      const output = parts.join('\n');
+
+      if (parts.some(p => p.length > MAX_OUTPUT_LENGTH)) {
         resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
         const blob = new Blob([output], { type: 'text/plain' });
         const link = document.createElement('a');
@@ -393,14 +409,16 @@
       } else {
         resultDiv.textContent = `Encrypted Code:\n\n${output}`;
         qrCodeDiv.innerHTML = '';
-        QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
-          if (!err) {
-            qrCodeDiv.appendChild(canvas);
-            const link = document.createElement('a');
-            link.download = 'encrypted-qr.png';
-            link.href = canvas.toDataURL();
-            link.click();
-          }
+        parts.forEach(part => {
+          QRCode.toCanvas(document.createElement('canvas'), part, (err, canvas) => {
+            if (!err) {
+              qrCodeDiv.appendChild(canvas);
+              const link = document.createElement('a');
+              link.download = 'encrypted-qr.png';
+              link.href = canvas.toDataURL();
+              link.click();
+            }
+          });
         });
       }
     };
@@ -427,25 +445,24 @@
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, canvas.width, canvas.height);
             if (!code) return alert('QR code could not be read.');
-    
+
+            const part = code.data.trim();
+            const [meta] = part.includes(':') ? part.split(':') : ['1/1'];
+            const [idx, tot] = meta.split('/');
+            qrParts[parseInt(idx) - 1] = part;
+            if (qrParts.filter(Boolean).length < parseInt(tot)) {
+              resultDiv.textContent = `Scanned part ${idx}/${tot}. Scan remaining parts.`;
+              return;
+            }
+
+            const parts = qrParts.slice(0, parseInt(tot));
+            qrParts = [];
             try {
-              const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
-              const salt = data.slice(0, 16);
-              const iv = data.slice(16, 28);
-              const ciphertext = data.slice(28);
-              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
-              const key = await crypto.subtle.deriveKey(
-                { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
-                keyMaterial,
-                { name: "AES-GCM", length: 256 },
-                false,
-                ["decrypt"]
-              );
-              const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
-              const sepIndex = new Uint8Array(decrypted).indexOf(124);
+              const decryptedBytes = await decryptChunks(parts, passphrase);
+              const sepIndex = decryptedBytes.indexOf(124);
               if (sepIndex !== -1) {
-                const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
-                const content = new Uint8Array(decrypted).slice(sepIndex + 1);
+                const mime = new TextDecoder().decode(decryptedBytes.slice(0, sepIndex));
+                const content = decryptedBytes.slice(sepIndex + 1);
                 const blob = new Blob([content], { type: mime });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
@@ -453,7 +470,7 @@
                 link.click();
                 resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
               } else {
-                resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+                resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decryptedBytes)}`;
               }
             } catch (err) {
               resultDiv.textContent = 'Error: ' + err.message;

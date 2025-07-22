@@ -22,6 +22,7 @@ No logs. No identities. No dependencies.
 - **Image Encryption** with MIME type preservation and auto-download of decrypted files  
   _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
 - Generate and download a **QR code** of the encrypted message or file (when output is within length limits)
+- Large outputs are automatically split into encrypted chunks with metadata for multi-part QR codes
 - Upload and decode QR codes for decryption
 - Share encrypted messages via URL (with auto-decrypt preload)
 - **Reset** button to clear fields and state
