@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>HexaShift Encryption Tool</title>
-  <link rel="icon" href="https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg" />
+  <title>Beam - Own your encryption. Share nothing else.</title>
+  <link rel="icon" href="img/beam.png" />
   <!-- Manifest for PWA -->
   <script>
     if (!document.querySelector('link[rel="manifest"]')) {
@@ -16,7 +16,7 @@
         background_color: "#ffffff",
         theme_color: "#007bff",
         icons: [{
-          src: "https://img.freepik.com/free-vector/padlock-coloured-outline_78370-548.jpg",
+          src: "img/beam.png",
           type: "image/png",
           sizes: "512x512"
         }]
@@ -108,7 +108,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>HexaShift 🔐</h1>
+    <img src="img/beam.png" style="width: 50%; height: 50%"><br>
+    <h1>Beam</h1>
     <label for="action">Select Action:</label>
     <select id="action" onchange="adjustView()">
       <option value="encryptText">Encrypt Text</option>
