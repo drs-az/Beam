@@ -556,6 +556,10 @@
             if (!sigB64 || !payloadB64) throw new Error('Invalid signed message format.');
             const pubText = document.getElementById('senderPubKey').value.trim();
             const valid = await verifyData(payloadB64, sigB64, pubText);
+            if (!valid) {
+              resultDiv.textContent = 'Signature invalid';
+              return;
+            }
             const bundle = JSON.parse(atob(payloadB64));
             const decrypted = await session.decrypt(bundle);
             const sepIndex = decrypted.indexOf('|');
@@ -567,9 +571,9 @@
               link.href = URL.createObjectURL(blob);
               link.download = 'decrypted-file';
               link.click();
-              resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
+              resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
             } else {
-              resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${decrypted}`;
+              resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
             }
           } else if (action === 'decryptFile') {
             const fileInput = document.getElementById('fileInput');
@@ -581,6 +585,10 @@
               try {
                 const pubText = document.getElementById('senderPubKey').value.trim();
                 const valid = await verifyData(payloadB64, sigB64, pubText);
+                if (!valid) {
+                  resultDiv.textContent = 'Signature invalid';
+                  return;
+                }
                 const bundle = JSON.parse(atob(payloadB64));
                 const decrypted = await session.decrypt(bundle);
                 const sepIndex = decrypted.indexOf('|');
@@ -592,9 +600,9 @@
                   link.href = URL.createObjectURL(blob);
                   link.download = 'decrypted-file';
                   link.click();
-                  resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
+                  resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
                 } else {
-                  resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${decrypted}`;
+                  resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
                 }
               } catch (err) {
                 resultDiv.textContent = 'Error: ' + err.message;
@@ -685,6 +693,10 @@
               if (!sigB64 || !payloadB64) throw new Error('Invalid signed message format.');
               const pubText = document.getElementById('senderPubKey').value.trim();
               const valid = await verifyData(payloadB64, sigB64, pubText);
+              if (!valid) {
+                resultDiv.textContent = 'Signature invalid';
+                return;
+              }
               const bundle = JSON.parse(atob(payloadB64));
               const decrypted = await session.decrypt(bundle);
               const sepIndex = decrypted.indexOf('|');
@@ -696,9 +708,9 @@
                 link.href = URL.createObjectURL(blob);
                 link.download = 'decrypted-file';
                 link.click();
-                resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
+                resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
               } else {
-                resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${decrypted}`;
+                resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
               }
             } catch (err) {
               resultDiv.textContent = 'Error: ' + err.message;
