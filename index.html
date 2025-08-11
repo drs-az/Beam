@@ -157,6 +157,7 @@
         <select id="contactSelect"></select>
         <img id="contactImagePreview" class="hidden" alt="Contact Image">
         <button type="button" id="editContactBtn" class="hidden">Edit Contact</button>
+        <button type="button" id="deleteContactBtn" class="hidden">Delete Contact</button>
       </div>
     </div>
 
@@ -363,6 +364,10 @@
       if (select) select.selectedIndex = 0;
       const imgPrev = document.getElementById('contactImagePreview');
       if (imgPrev) imgPrev.classList.add('hidden');
+      const editBtn = document.getElementById('editContactBtn');
+      if (editBtn) editBtn.classList.add('hidden');
+      const delBtn = document.getElementById('deleteContactBtn');
+      if (delBtn) delBtn.classList.add('hidden');
       checkStrength();
     }
 
@@ -372,6 +377,12 @@
       const selectGroup = document.getElementById('contactSelectGroup');
       const select = document.getElementById('contactSelect');
       select.innerHTML = '';
+      const imgPrev = document.getElementById('contactImagePreview');
+      if (imgPrev) imgPrev.classList.add('hidden');
+      const editBtn = document.getElementById('editContactBtn');
+      if (editBtn) editBtn.classList.add('hidden');
+      const delBtn = document.getElementById('deleteContactBtn');
+      if (delBtn) delBtn.classList.add('hidden');
       if (!contacts.length) {
         const opt = document.createElement('option');
         opt.value = '';
@@ -438,9 +449,11 @@
         const idx = e.target.value;
         const img = document.getElementById('contactImagePreview');
         const editBtn = document.getElementById('editContactBtn');
+        const delBtn = document.getElementById('deleteContactBtn');
         if (idx === '') {
           img.classList.add('hidden');
           editBtn.classList.add('hidden');
+          delBtn.classList.add('hidden');
           return;
         }
         const contact = contacts[idx];
@@ -448,6 +461,7 @@
         img.src = contact.image;
         img.classList.remove('hidden');
         editBtn.classList.remove('hidden');
+        delBtn.classList.remove('hidden');
       });
       document.getElementById('editContactBtn').addEventListener('click', () => {
         const select = document.getElementById('contactSelect');
@@ -464,6 +478,20 @@
         imgPrev.src = contact.image;
         imgPrev.classList.remove('hidden');
         document.getElementById('saveContactForm').classList.remove('hidden');
+      });
+      document.getElementById('deleteContactBtn').addEventListener('click', () => {
+        const select = document.getElementById('contactSelect');
+        const idx = select.value;
+        if (idx === '') return;
+        contacts.splice(idx, 1);
+        localStorage.setItem('contacts', JSON.stringify(contacts));
+        updateContactDropdown();
+        select.selectedIndex = 0;
+        document.getElementById('senderPubKey').value = '';
+        const img = document.getElementById('contactImagePreview');
+        img.classList.add('hidden');
+        document.getElementById('editContactBtn').classList.add('hidden');
+        document.getElementById('deleteContactBtn').classList.add('hidden');
       });
 
       document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
