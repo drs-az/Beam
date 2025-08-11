@@ -149,6 +149,7 @@
       <button type="button" id="saveContactBtn">Save Contact</button>
       <div id="saveContactForm" class="hidden">
         <input type="text" id="contactName" placeholder="Contact Name">
+        <label for="contactImageInput">Contact Image (100KB max):</label>
         <input type="file" id="contactImageInput" accept="image/*">
         <button type="button" id="confirmSaveContact">Save</button>
       </div>
@@ -184,6 +185,7 @@
   <script>
     const MAX_OUTPUT_LENGTH = 1000;
     const enc = new TextEncoder();
+    const MAX_CONTACT_IMAGE_SIZE = 100 * 1024; // 100KB
 
     // Convert a Uint8Array to a base64 string without using the spread operator.
     // Builds the binary string in manageable chunks to avoid stack overflows.
@@ -421,6 +423,7 @@
         const fileInput = document.getElementById('contactImageInput');
         const file = fileInput.files[0];
         if (!name || !pubKey || (editingIndex === null && !file)) return alert('Please provide name, public key, and image.');
+        if (file && file.size > MAX_CONTACT_IMAGE_SIZE) return alert('Image must be 100KB or less.');
 
         const saveContact = (image) => {
           if (editingIndex !== null) {
