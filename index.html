@@ -298,12 +298,13 @@
     
     function adjustView() {
       const action = document.getElementById('action').value;
-      document.getElementById('messageGroup').classList.toggle('hidden', action !== 'encryptText' && action !== 'decrypt');
+      const isDecrypt = action.startsWith('decrypt');
+      document.getElementById('messageGroup').classList.toggle('hidden', action !== 'encryptText' && !isDecrypt);
       document.getElementById('textFileGroup').classList.toggle('hidden', action !== 'decryptFile');
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
-      document.getElementById('pubKeyGroup').classList.toggle('hidden', !(action.startsWith('decrypt')));
-      if (action.startsWith('decrypt')) {
+      document.getElementById('pubKeyGroup').classList.toggle('hidden', !isDecrypt);
+      if (isDecrypt) {
         updateContactDropdown();
       }
 
@@ -368,18 +369,23 @@
     function updateContactDropdown() {
       const selectGroup = document.getElementById('contactSelectGroup');
       const select = document.getElementById('contactSelect');
+      select.innerHTML = '';
       if (!contacts.length) {
-        selectGroup.classList.add('hidden');
-        select.innerHTML = '';
-        return;
-      }
-      select.innerHTML = '<option value="">Select a contact...</option>';
-      contacts.forEach((c, idx) => {
         const opt = document.createElement('option');
-        opt.value = idx;
-        opt.textContent = c.name;
+        opt.value = '';
+        opt.textContent = 'No saved contacts';
         select.appendChild(opt);
-      });
+        select.disabled = true;
+      } else {
+        select.disabled = false;
+        select.innerHTML = '<option value="">Select a contact...</option>';
+        contacts.forEach((c, idx) => {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = c.name;
+          select.appendChild(opt);
+        });
+      }
       selectGroup.classList.remove('hidden');
     }
     
