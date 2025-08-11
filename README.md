@@ -1,10 +1,10 @@
 # Beam
 
-**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, HexaShift works entirely offline.
+**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, Beam works entirely offline.
 
 ## 🛡️ Privacy-First Philosophy
 
-Unlike legal-grade or enterprise tools that prioritize auditability and compliance, HexaShift embraces:
+Unlike legal-grade or enterprise tools that prioritize auditability and compliance, Beam embraces:
 
 - **Anonymity over accountability**
 - **Simplicity over bureaucracy**
@@ -26,6 +26,7 @@ No logs. No identities. No dependencies.
 - Handles large inputs with chunked base64 conversion
 - Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
 - Sign and verify messages with ECDSA digital signatures
+- Generate and export ECDSA key pairs for signing and verification
 - Public key address book to save and reuse sender keys with custom names and images
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
@@ -34,30 +35,28 @@ No logs. No identities. No dependencies.
 
 ## 🔐 Passphrase Guidelines
 
-You may use either:
-- Numeric sequences with commas (e.g. `4,2,5,8,3,3`)
-- Full alphanumeric passphrases (e.g. `correct horse battery staple`)
-
-> 💡 Commas are only required for numeric sequences. The app enforces a minimum
-> zxcvbn strength score of **3** before enabling any actions.
+- Passphrases must be at least 6 characters long.
+- The app enforces a minimum zxcvbn strength score of **3** before enabling any actions.
+- Choose a strong, unique passphrase to maximize security.
 
 ## 🚀 How to Use
 
 1. Open `index.html` in a browser (mobile or desktop).
-2. Select one of the actions from the dropdown:
+2. *(Optional)* Click **Generate Key Pair** to create an ECDSA key pair for signing. Use **Export Public Key** to share your public key with others.
+3. Select one of the actions from the dropdown:
    - **Encrypt Text**
    - **Decrypt Text**
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
-3. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
-4. Enter your passphrase.
-5. Click the corresponding action button:
+4. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
+5. Enter your passphrase.
+6. Click the corresponding action button:
    - **Run** for text encryption/decryption
    - **Encrypt Image** for image encryption
    - **Decode QR** for QR code decryption
-6. Review the result: copy the output, download the QR code, or share via the generated link.
-7. Use the **Reset** button to clear the form and start over.
+7. Review the result: copy the output, download the QR code, or share via the generated link.
+8. Use the **Reset** button to clear the form and start over.
 
 ## 🖼️ File and Image Encryption
 
