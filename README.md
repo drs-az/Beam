@@ -17,13 +17,15 @@ No logs. No identities. No dependencies.
 
 - **AES-256-GCM** encryption via the WebCrypto API
 - **PBKDF2** key derivation (150k iterations, SHA-256)
-- Custom passphrase input with a strength meter powered by **zxcvbn**
+- Custom passphrase input with a strength meter powered by **zxcvbn** (score ≥3 enforced)
 - Encrypt and decrypt text, images, and encrypted text files
-- **Image Encryption** with MIME type preservation and auto-download of decrypted files  
+- **Image Encryption** with MIME type preservation and auto-download of decrypted files
   _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
 - Generate and download a **QR code** of the encrypted message or file (when output is within length limits)
 - Upload and decode QR codes for decryption
-- Share encrypted messages via URL (with auto-decrypt preload)
+- Handles large inputs with chunked base64 conversion
+- Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
+- Optionally sign and verify messages with ECDSA digital signatures
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
 - Mobile-first responsive layout
@@ -35,7 +37,8 @@ You may use either:
 - Numeric sequences with commas (e.g. `4,2,5,8,3,3`)
 - Full alphanumeric passphrases (e.g. `correct horse battery staple`)
 
-> 💡 Commas are only required for numeric sequences.
+> 💡 Commas are only required for numeric sequences. The app enforces a minimum
+> zxcvbn strength score of **3** before enabling any actions.
 
 ## 🚀 How to Use
 
@@ -63,14 +66,15 @@ You may use either:
 
 ## 🔗 URL-Based Sharing
 
-When encrypting text or files, you can generate a shareable link. Anyone with this link and the correct passphrase can decrypt the message.
+When encrypting text or files, you can generate a shareable link that stores data
+in the URL hash fragment. Anyone with this link and the correct passphrase can decrypt the message, and using the hash helps prevent leakage via HTTP Referer headers.
 
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
 - **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
 - Choose a strong, unique passphrase to maximize security.
-- The app **does not support forward secrecy** or digital signatures.
+- The app provides optional digital signatures for authenticity but **does not support forward secrecy**.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
