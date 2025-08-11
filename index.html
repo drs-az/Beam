@@ -303,6 +303,9 @@
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
       document.getElementById('pubKeyGroup').classList.toggle('hidden', !(action.startsWith('decrypt')));
+      if (action.startsWith('decrypt')) {
+        updateContactDropdown();
+      }
 
       // Toggle buttons based on action for UI clarity:
       if (action === 'encryptImage') {
