@@ -411,7 +411,12 @@
         alert('Session initialized!');
       });
 
-      contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+      try {
+        contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+      } catch (e) {
+        contacts = [];
+        localStorage.removeItem('contacts');
+      }
       updateContactDropdown();
       document.getElementById('saveContactBtn').addEventListener('click', () => {
         editingIndex = null;
