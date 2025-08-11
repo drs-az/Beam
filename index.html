@@ -343,10 +343,13 @@
       document.getElementById('mySessionKey').value = session.publicKey;
     }
     
-    function copyToClipboard() { 
-      const text = document.getElementById('result').textContent; 
-      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim(); 
-      navigator.clipboard.writeText(cleaned).then(() => alert('Copied!')); 
+    function copyToClipboard() {
+      const text = document.getElementById('result').textContent;
+      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
+      navigator.clipboard
+        .writeText(cleaned)
+        .then(() => alert('Copied!'))
+        .catch(err => alert('Copy failed: ' + err.message));
     }
     
     function resetForm() {
@@ -405,6 +408,11 @@
     document.addEventListener('DOMContentLoaded', () => {
       adjustView();
       setupSession();
+      const copyBtn = document.querySelector("button[onclick='copyToClipboard()']");
+      if (!navigator.clipboard && copyBtn) {
+        copyBtn.disabled = true;
+        copyBtn.title = 'Clipboard API unavailable';
+      }
       document.getElementById('initSession').addEventListener('click', async () => {
         const peer = document.getElementById('peerSessionKey').value.trim();
         if (!peer) return alert('Enter peer session key.');
