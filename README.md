@@ -26,7 +26,7 @@ No logs. No identities. No dependencies.
 - Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
 - Sign and verify messages with ECDSA digital signatures
 - Generate and export ECDSA key pairs for signing and verification
-- Experimental `RatchetSession` for ephemeral ECDH exchange with per-message HKDF key ratchet
+- `RatchetSession` for ephemeral ECDH exchange with per-message HKDF key ratchet
 - Public key address book to save and reuse sender keys with custom names and images
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
@@ -65,11 +65,7 @@ in the URL hash fragment. Anyone with this link and the session state can decryp
 
 ## 🔄 Ephemeral Sessions
 
-`ratchet.js` powers the default `RatchetSession` implementation used throughout the app. Two parties exchange an ephemeral ECDH key pair and then derive a fresh symmetric key for every message via HKDF, providing lightweight forward secrecy without repeating the key exchange.
-
-## 🔄 Ephemeral Sessions (Experimental)
-
-`ratchet.js` contains a small `RatchetSession` helper showing how two parties can exchange an ephemeral ECDH key pair and then derive a fresh symmetric key for every message via HKDF. This provides lightweight forward secrecy without repeating the key exchange.
+Beam uses `ratchet.js` as its default `RatchetSession` implementation. Two parties exchange an ephemeral ECDH key pair and derive a fresh symmetric key for every message via HKDF, providing lightweight forward secrecy without repeating the key exchange.
 
 ## ⚠️ Security & Connectivity Notes
 
