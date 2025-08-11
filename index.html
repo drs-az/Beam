@@ -189,29 +189,64 @@
       return bytes;
     }
 
+    const DB_NAME = 'hexaKeys';
+    const STORE_NAME = 'keys';
+    let dbPromise;
+
+    function getDB() {
+      if (!dbPromise) {
+        dbPromise = new Promise((resolve, reject) => {
+          const request = indexedDB.open(DB_NAME, 1);
+          request.onupgradeneeded = () => {
+            request.result.createObjectStore(STORE_NAME);
+          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+      }
+      return dbPromise;
+    }
+
+    async function saveKey(name, value) {
+      const db = await getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(value, name);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function loadKey(name) {
+      const db = await getDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(name);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
     async function getPrivateKey() {
-      const jwk = localStorage.getItem('privateKey');
-      if (!jwk) return null;
-      return crypto.subtle.importKey('jwk', JSON.parse(jwk), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+      return loadKey('privateKey');
     }
 
     async function generateKeyPair() {
       const keys = await crypto.subtle.generateKey(
         { name: 'ECDSA', namedCurve: 'P-256' },
-        true,
+        false,
         ['sign', 'verify']
       );
-      const privJwk = await crypto.subtle.exportKey('jwk', keys.privateKey);
       const pubJwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
-      localStorage.setItem('privateKey', JSON.stringify(privJwk));
-      localStorage.setItem('publicKey', JSON.stringify(pubJwk));
+      await saveKey('privateKey', keys.privateKey);
+      await saveKey('publicKey', pubJwk);
       alert('Key pair generated and stored locally.');
     }
 
     async function exportPublicKey() {
-      const pub = localStorage.getItem('publicKey');
+      const pub = await loadKey('publicKey');
       if (!pub) return alert('No key pair found. Generate one first.');
-      const blob = new Blob([pub], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(pub)], { type: 'application/json' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = 'publicKey.json';
@@ -228,8 +263,19 @@
       return bytesToBase64(new Uint8Array(signature));
     }
 
+    async function getPublicKey() {
+      return loadKey('publicKey');
+    }
+
     async function verifyData(data, sigB64, pubKeyText) {
-      const pubKey = await crypto.subtle.importKey('jwk', JSON.parse(pubKeyText), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      let jwk;
+      if (pubKeyText) {
+        jwk = JSON.parse(pubKeyText);
+      } else {
+        jwk = await getPublicKey();
+        if (!jwk) throw new Error('Public key required for verification.');
+      }
+      const pubKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
       const signature = base64ToBytes(sigB64);
       return crypto.subtle.verify({ name: 'ECDSA', hash: { name: 'SHA-256' } }, pubKey, signature, enc.encode(data));
     }
@@ -365,7 +411,6 @@
             const [sigB64, cipherB64] = message.split('.', 2);
             if (!sigB64 || !cipherB64) throw new Error('Invalid signed message format.');
             const pubText = document.getElementById('senderPubKey').value.trim();
-            if (!pubText) throw new Error('Sender public key required.');
             const valid = await verifyData(cipherB64, sigB64, pubText);
             const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
@@ -402,7 +447,6 @@
               const [sigB64, cipherB64] = fileContent.split('.', 2);
               try {
                 const pubText = document.getElementById('senderPubKey').value.trim();
-                if (!pubText) throw new Error('Sender public key required.');
                 const valid = await verifyData(cipherB64, sigB64, pubText);
                 const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
                 const salt = data.slice(0, 16);
@@ -537,7 +581,6 @@
               const [sigB64, cipherB64] = code.data.split('.', 2);
               if (!sigB64 || !cipherB64) throw new Error('Invalid signed message format.');
               const pubText = document.getElementById('senderPubKey').value.trim();
-              if (!pubText) throw new Error('Sender public key required.');
               const valid = await verifyData(cipherB64, sigB64, pubText);
               const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
               const salt = data.slice(0, 16);
