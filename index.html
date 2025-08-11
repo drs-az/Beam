@@ -577,7 +577,16 @@
               return;
             }
             const bundle = JSON.parse(atob(payloadB64));
-            const decrypted = await session.decrypt(bundle);
+            let decrypted;
+            try {
+              decrypted = await session.decrypt(bundle);
+            } catch (err) {
+              if (err.message === 'Bad header MAC') {
+                resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
+                return;
+              }
+              throw err;
+            }
             const sepIndex = decrypted.indexOf('|');
             if (sepIndex !== -1) {
               const mime = decrypted.slice(0, sepIndex);
@@ -606,7 +615,16 @@
                   return;
                 }
                 const bundle = JSON.parse(atob(payloadB64));
-                const decrypted = await session.decrypt(bundle);
+                let decrypted;
+                try {
+                  decrypted = await session.decrypt(bundle);
+                } catch (err) {
+                  if (err.message === 'Bad header MAC') {
+                    resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
+                    return;
+                  }
+                  throw err;
+                }
                 const sepIndex = decrypted.indexOf('|');
                 if (sepIndex !== -1) {
                   const mime = decrypted.slice(0, sepIndex);
@@ -723,7 +741,16 @@
                 return;
               }
               const bundle = JSON.parse(atob(payloadB64));
-              const decrypted = await session.decrypt(bundle);
+              let decrypted;
+              try {
+                decrypted = await session.decrypt(bundle);
+              } catch (err) {
+                if (err.message === 'Bad header MAC') {
+                  resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
+                  return;
+                }
+                throw err;
+              }
               const sepIndex = decrypted.indexOf('|');
               if (sepIndex !== -1) {
                 const mime = decrypted.slice(0, sepIndex);
