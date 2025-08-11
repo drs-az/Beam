@@ -137,11 +137,11 @@
     <input type="password" id="key" oninput="checkStrength()" placeholder="Enter your passphrase">
     <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
     <div id="strength"></div>
-    
+
     <div class="tools" style="margin-top: 10px;">
-      <button id="runButton">Run</button>
-      <button id="encryptImage">Encrypt Image</button>
-      <button id="decodeQR">Decode QR</button>
+      <button id="runButton" disabled>Run</button>
+      <button id="encryptImage" disabled>Encrypt Image</button>
+      <button id="decodeQR" disabled>Decode QR</button>
       <button onclick="resetForm()">Reset</button>
       <button onclick="copyToClipboard()">Copy Result</button>
     </div>
@@ -187,11 +187,15 @@
       keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; 
     }
     
-    function checkStrength() { 
-      const input = document.getElementById('key').value; 
-      const result = zxcvbn(input); 
-      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong']; 
-      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score]; 
+    function checkStrength() {
+      const input = document.getElementById('key').value;
+      const result = zxcvbn(input);
+      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
+      const strong = result.score >= 3;
+      document.getElementById('runButton').disabled = !strong;
+      document.getElementById('encryptImage').disabled = !strong;
+      document.getElementById('decodeQR').disabled = !strong;
     }
     
     function copyToClipboard() { 
@@ -207,10 +211,11 @@
       document.getElementById('fileInput').value = '';
       document.getElementById('imageInput').value = '';
       document.getElementById('qrInput').value = '';
-      document.getElementById('key').value = ''; 
-      document.getElementById('result').textContent = ''; 
-      document.getElementById('strength').textContent = ''; 
-      document.getElementById('qrcode').innerHTML = ''; 
+      document.getElementById('key').value = '';
+      document.getElementById('result').textContent = '';
+      document.getElementById('strength').textContent = '';
+      document.getElementById('qrcode').innerHTML = '';
+      checkStrength();
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
@@ -218,6 +223,7 @@
       const enc = new TextEncoder();
       
       adjustView();
+      checkStrength();
       
       // Check for 'code' query parameter and set decryption view if present
       const params = new URLSearchParams(window.location.search);
@@ -229,12 +235,13 @@
       }
     
       document.getElementById('runButton').addEventListener('click', async () => { 
-        const action = document.getElementById('action').value; 
-        const passphrase = document.getElementById('key').value.trim(); 
-        const resultDiv = document.getElementById('result'); 
-        const qrCodeDiv = document.getElementById('qrcode'); 
-        qrCodeDiv.innerHTML = ''; 
+        const action = document.getElementById('action').value;
+        const passphrase = document.getElementById('key').value.trim();
+        const resultDiv = document.getElementById('result');
+        const qrCodeDiv = document.getElementById('qrcode');
+        qrCodeDiv.innerHTML = '';
         if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+        if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
     
         try {
           if (action === 'encryptText') {
@@ -345,12 +352,12 @@
       });
     
       // Encrypt Image button handler
-  document.getElementById('encryptImage').addEventListener('click', async () => { 
-    const fileInput = document.getElementById('imageInput'); 
-    const resultDiv = document.getElementById('result'); 
-    const qrCodeDiv = document.getElementById('qrcode'); 
-    const passphrase = document.getElementById('key').value.trim(); 
-    if (!fileInput.files[0]) return alert('Please upload an image.'); 
+  document.getElementById('encryptImage').addEventListener('click', async () => {
+    const fileInput = document.getElementById('imageInput');
+    const resultDiv = document.getElementById('result');
+    const qrCodeDiv = document.getElementById('qrcode');
+    const passphrase = document.getElementById('key').value.trim();
+    if (!fileInput.files[0]) return alert('Please upload an image.');
 
     // Check if the image file size exceeds 100kb (100 * 1024 bytes)
     if (fileInput.files[0].size > 100 * 1024) {
@@ -359,6 +366,7 @@
     }
 
     if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+    if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
     
     const reader = new FileReader();
     reader.onload = async function () {
@@ -409,11 +417,12 @@
     
       // Decode QR button handler
       document.getElementById('decodeQR').addEventListener('click', async () => { 
-        const fileInput = document.getElementById('qrInput'); 
-        const passphrase = document.getElementById('key').value.trim(); 
-        const resultDiv = document.getElementById('result'); 
-        if (!fileInput.files[0]) return alert('Please upload a QR code image.'); 
+        const fileInput = document.getElementById('qrInput');
+        const passphrase = document.getElementById('key').value.trim();
+        const resultDiv = document.getElementById('result');
+        if (!fileInput.files[0]) return alert('Please upload a QR code image.');
         if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+        if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
     
         const reader = new FileReader();
         reader.onload = async function () {
