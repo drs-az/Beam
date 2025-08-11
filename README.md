@@ -70,7 +70,7 @@ Beam uses `ratchet.js` as its default `RatchetSession` implementation. Two parti
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — session secrets are never stored or transmitted.
-- **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
+- **Offline Functionality:** All required libraries (`qrcode.min.js`, `jsQR.js`, `ratchet.js`) are bundled locally, so Beam runs fully offline once the page is loaded.
 - Designed for forward secrecy by default using an ephemeral ratchet session.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
