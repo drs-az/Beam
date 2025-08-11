@@ -12,8 +12,8 @@ function _b64ToBuf(b64) {
   return Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 }
 
-async function _hkdf(keyMaterial, info) {
-  const salt = new Uint8Array(32); // all zeros
+async function _hkdf(keyMaterial, info, salt) {
+  salt = salt || crypto.getRandomValues(new Uint8Array(32));
   const key = await crypto.subtle.importKey('raw', keyMaterial, 'HKDF', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({
     name: 'HKDF',
@@ -21,7 +21,7 @@ async function _hkdf(keyMaterial, info) {
     salt,
     info: _enc.encode(info)
   }, key, 256);
-  return new Uint8Array(bits);
+  return { key: new Uint8Array(bits), salt };
 }
 
 async function _hmacSign(keyBytes, data) {
@@ -164,14 +164,14 @@ class RatchetSession {
     this.rootKey = new Uint8Array(shared);
     if (initiator) {
       this.CKs = await _hkdf(this.rootKey, 'init_CKs');
-      this.HKs = await _hkdf(this.rootKey, 'init_HKs');
+      this.HKs = (await _hkdf(this.rootKey, 'init_HKs')).key;
       this.CKr = await _hkdf(this.rootKey, 'init_CKr');
-      this.HKr = await _hkdf(this.rootKey, 'init_HKr');
+      this.HKr = (await _hkdf(this.rootKey, 'init_HKr')).key;
     } else {
       this.CKs = await _hkdf(this.rootKey, 'init_CKr');
-      this.HKs = await _hkdf(this.rootKey, 'init_HKr');
+      this.HKs = (await _hkdf(this.rootKey, 'init_HKr')).key;
       this.CKr = await _hkdf(this.rootKey, 'init_CKs');
-      this.HKr = await _hkdf(this.rootKey, 'init_HKs');
+      this.HKr = (await _hkdf(this.rootKey, 'init_HKs')).key;
     }
   }
 
@@ -180,20 +180,20 @@ class RatchetSession {
   }
 
   async _nextSendMessageKey() {
-    const mk = await _hkdf(this.CKs, 'msg');
-    this.CKs = await _hkdf(this.CKs, 'chain');
+    const mk = await _hkdf(this.CKs.key, `msg_${this.Ns}`, this.CKs.salt);
+    this.CKs = await _hkdf(this.CKs.key, `chain_${this.Ns}`);
     return {
-      encKey: await _hkdf(mk, 'enc'),
-      authKey: await _hkdf(mk, 'auth')
+      encKey: (await _hkdf(mk.key, `enc_${this.Ns}`, mk.salt)).key,
+      authKey: (await _hkdf(mk.key, `auth_${this.Ns}`, mk.salt)).key
     };
   }
 
   async _nextRecvMessageKey() {
-    const mk = await _hkdf(this.CKr, 'msg');
-    this.CKr = await _hkdf(this.CKr, 'chain');
+    const mk = await _hkdf(this.CKr.key, `msg_${this.Nr}`, this.CKr.salt);
+    this.CKr = await _hkdf(this.CKr.key, `chain_${this.Nr}`);
     return {
-      encKey: await _hkdf(mk, 'enc'),
-      authKey: await _hkdf(mk, 'auth')
+      encKey: (await _hkdf(mk.key, `enc_${this.Nr}`, mk.salt)).key,
+      authKey: (await _hkdf(mk.key, `auth_${this.Nr}`, mk.salt)).key
     };
   }
 
@@ -218,9 +218,9 @@ class RatchetSession {
     // derive receiving chain
     let dh = await crypto.subtle.deriveBits({ name: 'ECDH', public: newKey }, this.DHs.privateKey, 256);
     let material = new Uint8Array([...this.rootKey, ...new Uint8Array(dh)]);
-    this.rootKey = await _hkdf(material, 'root');
+    this.rootKey = (await _hkdf(material, 'root')).key;
     this.CKr = await _hkdf(this.rootKey, 'recv_ck');
-    this.HKr = await _hkdf(this.rootKey, 'recv_header');
+    this.HKr = (await _hkdf(this.rootKey, 'recv_header')).key;
     this.Nr = 0;
     this.DHr = newKey;
     // set up sending chain with new DHs
@@ -229,9 +229,9 @@ class RatchetSession {
     this.publicKey = _bufToB64(raw);
     dh = await crypto.subtle.deriveBits({ name: 'ECDH', public: this.DHr }, this.DHs.privateKey, 256);
     material = new Uint8Array([...this.rootKey, ...new Uint8Array(dh)]);
-    this.rootKey = await _hkdf(material, 'root');
+    this.rootKey = (await _hkdf(material, 'root')).key;
     this.CKs = await _hkdf(this.rootKey, 'send_ck');
-    this.HKs = await _hkdf(this.rootKey, 'send_header');
+    this.HKs = (await _hkdf(this.rootKey, 'send_header')).key;
   }
 
   async encrypt(plaintext) {
