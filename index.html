@@ -99,6 +99,11 @@
       margin-top: 1rem;
       text-align: center;
     }
+    #contactImagePreview {
+      max-width: 80px;
+      margin-top: 0.5rem;
+      border-radius: 50%;
+    }
   </style>
 </head>
 <body>
@@ -141,6 +146,17 @@
     <div id="pubKeyGroup" class="hidden">
       <label for="senderPubKey">Sender Public Key:</label>
       <textarea id="senderPubKey" rows="3" placeholder="Paste sender public key for verification..."></textarea>
+      <button type="button" id="saveContactBtn">Save Contact</button>
+      <div id="saveContactForm" class="hidden">
+        <input type="text" id="contactName" placeholder="Contact Name">
+        <input type="file" id="contactImageInput" accept="image/*">
+        <button type="button" id="confirmSaveContact">Save</button>
+      </div>
+      <div id="contactSelectGroup" class="hidden">
+        <label for="contactSelect">Or choose saved contact:</label>
+        <select id="contactSelect"></select>
+        <img id="contactImagePreview" class="hidden" alt="Contact Image">
+      </div>
     </div>
 
     <div class="tools" style="margin-top: 10px;">
@@ -326,23 +342,78 @@
       navigator.clipboard.writeText(cleaned).then(() => alert('Copied!')); 
     }
     
-    function resetForm() { 
-      document.getElementById('action').value = 'encryptText'; 
-      adjustView(); 
-      document.getElementById('message').value = ''; 
+    function resetForm() {
+      document.getElementById('action').value = 'encryptText';
+      adjustView();
+      document.getElementById('message').value = '';
       document.getElementById('fileInput').value = '';
       document.getElementById('imageInput').value = '';
       document.getElementById('qrInput').value = '';
       document.getElementById('key').value = '';
+      document.getElementById('senderPubKey').value = '';
       document.getElementById('result').textContent = '';
       document.getElementById('strength').textContent = '';
       document.getElementById('qrcode').innerHTML = '';
+      const select = document.getElementById('contactSelect');
+      if (select) select.selectedIndex = 0;
+      const imgPrev = document.getElementById('contactImagePreview');
+      if (imgPrev) imgPrev.classList.add('hidden');
       checkStrength();
     }
+
+    let contacts = [];
+    function updateContactDropdown() {
+      const selectGroup = document.getElementById('contactSelectGroup');
+      const select = document.getElementById('contactSelect');
+      if (!contacts.length) {
+        selectGroup.classList.add('hidden');
+        select.innerHTML = '';
+        return;
+      }
+      select.innerHTML = '<option value="">Select a contact...</option>';
+      contacts.forEach((c, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
+      selectGroup.classList.remove('hidden');
+    }
     
-    document.addEventListener('DOMContentLoaded', () => { 
+    document.addEventListener('DOMContentLoaded', () => {
       adjustView();
       checkStrength();
+
+      contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
+      updateContactDropdown();
+      document.getElementById('saveContactBtn').addEventListener('click', () => {
+        document.getElementById('saveContactForm').classList.toggle('hidden');
+      });
+      document.getElementById('confirmSaveContact').addEventListener('click', () => {
+        const name = document.getElementById('contactName').value.trim();
+        const pubKey = document.getElementById('senderPubKey').value.trim();
+        const file = document.getElementById('contactImageInput').files[0];
+        if (!name || !pubKey || !file) return alert('Please provide name, public key, and image.');
+        const reader = new FileReader();
+        reader.onload = () => {
+          contacts.push({ name, pubKey, image: reader.result });
+          localStorage.setItem('contacts', JSON.stringify(contacts));
+          updateContactDropdown();
+          document.getElementById('saveContactForm').classList.add('hidden');
+          document.getElementById('contactName').value = '';
+          document.getElementById('contactImageInput').value = '';
+        };
+        reader.readAsDataURL(file);
+      });
+      document.getElementById('contactSelect').addEventListener('change', (e) => {
+        const idx = e.target.value;
+        if (idx === '') return;
+        const contact = contacts[idx];
+        document.getElementById('senderPubKey').value = contact.pubKey;
+        const img = document.getElementById('contactImagePreview');
+        img.src = contact.image;
+        img.classList.remove('hidden');
+      });
 
       document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
       document.getElementById('exportPubKey').addEventListener('click', exportPublicKey);

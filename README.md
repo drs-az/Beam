@@ -26,6 +26,7 @@ No logs. No identities. No dependencies.
 - Handles large inputs with chunked base64 conversion
 - Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
 - Sign and verify messages with ECDSA digital signatures
+- Public key address book to save and reuse sender keys with custom names and images
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
 - Mobile-first responsive layout
