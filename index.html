@@ -156,6 +156,7 @@
         <label for="contactSelect">Or choose saved contact:</label>
         <select id="contactSelect"></select>
         <img id="contactImagePreview" class="hidden" alt="Contact Image">
+        <button type="button" id="editContactBtn" class="hidden">Edit Contact</button>
       </div>
     </div>
 
@@ -366,6 +367,7 @@
     }
 
     let contacts = [];
+    let editingIndex = null;
     function updateContactDropdown() {
       const selectGroup = document.getElementById('contactSelectGroup');
       const select = document.getElementById('contactSelect');
@@ -396,32 +398,72 @@
       contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
       updateContactDropdown();
       document.getElementById('saveContactBtn').addEventListener('click', () => {
+        editingIndex = null;
+        document.getElementById('contactName').value = '';
+        document.getElementById('contactImageInput').value = '';
+        delete document.getElementById('contactImageInput').dataset.image;
         document.getElementById('saveContactForm').classList.toggle('hidden');
       });
       document.getElementById('confirmSaveContact').addEventListener('click', () => {
         const name = document.getElementById('contactName').value.trim();
         const pubKey = document.getElementById('senderPubKey').value.trim();
-        const file = document.getElementById('contactImageInput').files[0];
-        if (!name || !pubKey || !file) return alert('Please provide name, public key, and image.');
-        const reader = new FileReader();
-        reader.onload = () => {
-          contacts.push({ name, pubKey, image: reader.result });
+        const fileInput = document.getElementById('contactImageInput');
+        const file = fileInput.files[0];
+        if (!name || !pubKey || (editingIndex === null && !file)) return alert('Please provide name, public key, and image.');
+
+        const saveContact = (image) => {
+          if (editingIndex !== null) {
+            contacts[editingIndex] = { name, pubKey, image };
+          } else {
+            contacts.push({ name, pubKey, image });
+          }
           localStorage.setItem('contacts', JSON.stringify(contacts));
           updateContactDropdown();
           document.getElementById('saveContactForm').classList.add('hidden');
           document.getElementById('contactName').value = '';
-          document.getElementById('contactImageInput').value = '';
+          fileInput.value = '';
+          delete fileInput.dataset.image;
+          editingIndex = null;
         };
-        reader.readAsDataURL(file);
+
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = () => saveContact(reader.result);
+          reader.readAsDataURL(file);
+        } else {
+          saveContact(fileInput.dataset.image);
+        }
       });
       document.getElementById('contactSelect').addEventListener('change', (e) => {
         const idx = e.target.value;
-        if (idx === '') return;
+        const img = document.getElementById('contactImagePreview');
+        const editBtn = document.getElementById('editContactBtn');
+        if (idx === '') {
+          img.classList.add('hidden');
+          editBtn.classList.add('hidden');
+          return;
+        }
         const contact = contacts[idx];
         document.getElementById('senderPubKey').value = contact.pubKey;
-        const img = document.getElementById('contactImagePreview');
         img.src = contact.image;
         img.classList.remove('hidden');
+        editBtn.classList.remove('hidden');
+      });
+      document.getElementById('editContactBtn').addEventListener('click', () => {
+        const select = document.getElementById('contactSelect');
+        const idx = select.value;
+        if (idx === '') return;
+        editingIndex = idx;
+        const contact = contacts[idx];
+        document.getElementById('contactName').value = contact.name;
+        document.getElementById('senderPubKey').value = contact.pubKey;
+        const fileInput = document.getElementById('contactImageInput');
+        fileInput.value = '';
+        fileInput.dataset.image = contact.image;
+        const imgPrev = document.getElementById('contactImagePreview');
+        imgPrev.src = contact.image;
+        imgPrev.classList.remove('hidden');
+        document.getElementById('saveContactForm').classList.remove('hidden');
       });
 
       document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
