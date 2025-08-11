@@ -434,6 +434,8 @@
         if (!name || !pubKey || (editingIndex === null && !file)) return alert('Please provide name, public key, and image.');
         if (file && file.size > MAX_CONTACT_IMAGE_SIZE) return alert('Image must be 100KB or less.');
 
+        const resultDiv = document.getElementById('result');
+
         const saveContact = (image) => {
           if (editingIndex !== null) {
             contacts[editingIndex] = { name, pubKey, image };
@@ -452,6 +454,11 @@
         if (file) {
           const reader = new FileReader();
           reader.onload = () => saveContact(reader.result);
+          reader.onerror = () => {
+            resultDiv.textContent = 'Error reading file: ' + reader.error.message;
+            fileInput.value = '';
+            delete fileInput.dataset.image;
+          };
           reader.readAsDataURL(file);
         } else {
           saveContact(fileInput.dataset.image);
@@ -609,6 +616,10 @@
                 resultDiv.textContent = 'Error: ' + err.message;
               }
             };
+            reader.onerror = () => {
+              resultDiv.textContent = 'Error reading file: ' + reader.error.message;
+              fileInput.value = '';
+            };
             reader.readAsText(fileInput.files[0]);
           }
         } catch (err) {
@@ -666,6 +677,11 @@
         });
       }
     };
+    reader.onerror = () => {
+      resultDiv.textContent = 'Error reading file: ' + reader.error.message;
+      qrCodeDiv.innerHTML = '';
+      fileInput.value = '';
+    };
     reader.readAsArrayBuffer(fileInput.files[0]);
   });
     
@@ -718,6 +734,10 @@
             }
           };
           img.src = reader.result;
+        };
+        reader.onerror = () => {
+          resultDiv.textContent = 'Error reading file: ' + reader.error.message;
+          fileInput.value = '';
         };
         reader.readAsDataURL(fileInput.files[0]);
       });
