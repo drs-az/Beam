@@ -27,6 +27,7 @@ No logs. No identities. No dependencies.
 - Sign and verify messages with ECDSA digital signatures
 - Generate and export ECDSA key pairs for signing and verification
 - `RatchetSession` for ephemeral ECDH exchange with per-message HKDF key ratchet
+- Persistent identity key pair stored in local storage with signed prekeys for peer verification (X3DH-style)
 - Public key address book to save and reuse sender keys with custom names and images
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality

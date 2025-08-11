@@ -26,21 +26,26 @@ async function _hkdf(keyMaterial, info) {
 
 class RatchetSession {
   constructor() {
-    this.keyPair = null;
+    this.identityKeyPair = null; // persistent signing key
+    this.keyPair = null; // ECDH ratchet key pair
     this.publicKey = null;
+    this.signedPrekey = null; // { key: b64, sig: b64 }
     this.sendChainKey = null;
     this.recvChainKey = null;
   }
 
-  // Create a new session with fresh ECDH key pair
+  // Load or generate identity key and create a fresh ECDH key pair
   static async create() {
     const s = new RatchetSession();
+    await s._ensureIdentity();
     s.keyPair = await crypto.subtle.generateKey(
       { name: 'ECDH', namedCurve: 'P-256' },
       true,
       ['deriveBits']
     );
-    s.publicKey = await s.exportPublicKey();
+    const raw = await crypto.subtle.exportKey('raw', s.keyPair.publicKey);
+    s.publicKey = _bufToB64(raw);
+    await s._signPrekey(raw);
     return s;
   }
 
@@ -62,10 +67,84 @@ class RatchetSession {
     );
   }
 
+  // Load identity key pair from storage or create a new one
+  async _ensureIdentity() {
+    const stored = localStorage.getItem('identityKeyPair');
+    if (stored) {
+      const jwk = JSON.parse(stored);
+      this.identityKeyPair = {
+        privateKey: await crypto.subtle.importKey('jwk', jwk.private, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign']),
+        publicKey: await crypto.subtle.importKey('jwk', jwk.public, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify'])
+      };
+    } else {
+      this.identityKeyPair = await crypto.subtle.generateKey(
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign', 'verify']
+      );
+      const priv = await crypto.subtle.exportKey('jwk', this.identityKeyPair.privateKey);
+      const pub = await crypto.subtle.exportKey('jwk', this.identityKeyPair.publicKey);
+      localStorage.setItem('identityKeyPair', JSON.stringify({ private: priv, public: pub }));
+    }
+  }
+
+  // Sign the current public key with the identity key
+  async _signPrekey(rawPub) {
+    const sig = await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      this.identityKeyPair.privateKey,
+      rawPub
+    );
+    this.signedPrekey = { key: this.publicKey, sig: _bufToB64(sig) };
+  }
+
+  // Export identity public key
+  async exportIdentityKey() {
+    const raw = await crypto.subtle.exportKey('raw', this.identityKeyPair.publicKey);
+    return _bufToB64(raw);
+  }
+
+  // Export signed prekey (public key + signature)
+  async exportSignedPrekey() {
+    if (!this.signedPrekey) {
+      const raw = await crypto.subtle.exportKey('raw', this.keyPair.publicKey);
+      await this._signPrekey(raw);
+    }
+    return this.signedPrekey;
+  }
+
+  // Import a peer's identity key from base64
+  static async importIdentityKey(b64) {
+    const raw = _b64ToBuf(b64);
+    return crypto.subtle.importKey('raw', raw, { name: 'ECDSA', namedCurve: 'P-256' }, true, ['verify']);
+  }
+
+  // Verify a signed prekey and return the peer's ECDH key
+  static async importSignedPrekey(bundle, identityKey) {
+    const keyRaw = _b64ToBuf(bundle.key);
+    const sig = _b64ToBuf(bundle.sig);
+    const ok = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      identityKey,
+      sig,
+      keyRaw
+    );
+    if (!ok) throw new Error('Invalid signed prekey');
+    return crypto.subtle.importKey(
+      'raw',
+      keyRaw,
+      { name: 'ECDH', namedCurve: 'P-256' },
+      true,
+      []
+    );
+  }
+
   // After exchanging public keys, derive shared secret and set chain keys.
   // Initiator and responder swap send/receive derivations.
-  async init(peerPublicB64, initiator = true) {
-    const peerKey = await this.importPeerPublicKey(peerPublicB64);
+  async init(peerPublicKey, initiator = true) {
+    const peerKey = typeof peerPublicKey === 'string'
+      ? await this.importPeerPublicKey(peerPublicKey)
+      : peerPublicKey;
     const shared = await crypto.subtle.deriveBits({ name: 'ECDH', public: peerKey }, this.keyPair.privateKey, 256);
     const rootKey = new Uint8Array(shared);
     if (initiator) {
