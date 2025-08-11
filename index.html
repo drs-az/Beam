@@ -138,12 +138,19 @@
     <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
     <div id="strength"></div>
 
+    <div id="pubKeyGroup" class="hidden">
+      <label for="senderPubKey">Sender Public Key:</label>
+      <textarea id="senderPubKey" rows="3" placeholder="Paste sender public key for verification..."></textarea>
+    </div>
+
     <div class="tools" style="margin-top: 10px;">
       <button id="runButton" disabled>Run</button>
       <button id="encryptImage" disabled>Encrypt Image</button>
       <button id="decodeQR" disabled>Decode QR</button>
       <button onclick="resetForm()">Reset</button>
       <button onclick="copyToClipboard()">Copy Result</button>
+      <button id="generateKeys">Generate Key Pair</button>
+      <button id="exportPubKey">Export Public Key</button>
     </div>
     
     <h2>Result</h2>
@@ -158,6 +165,7 @@
   
   <script>
     const MAX_OUTPUT_LENGTH = 1000;
+    const enc = new TextEncoder();
 
     // Convert a Uint8Array to a base64 string without using the spread operator.
     // Builds the binary string in manageable chunks to avoid stack overflows.
@@ -171,6 +179,60 @@
       }
       return btoa(binary);
     }
+
+    function base64ToBytes(b64) {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    async function getPrivateKey() {
+      const jwk = localStorage.getItem('privateKey');
+      if (!jwk) return null;
+      return crypto.subtle.importKey('jwk', JSON.parse(jwk), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    }
+
+    async function generateKeyPair() {
+      const keys = await crypto.subtle.generateKey(
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign', 'verify']
+      );
+      const privJwk = await crypto.subtle.exportKey('jwk', keys.privateKey);
+      const pubJwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
+      localStorage.setItem('privateKey', JSON.stringify(privJwk));
+      localStorage.setItem('publicKey', JSON.stringify(pubJwk));
+      alert('Key pair generated and stored locally.');
+    }
+
+    async function exportPublicKey() {
+      const pub = localStorage.getItem('publicKey');
+      if (!pub) return alert('No key pair found. Generate one first.');
+      const blob = new Blob([pub], { type: 'application/json' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = 'publicKey.json';
+      link.click();
+    }
+
+    async function signData(data) {
+      const privKey = await getPrivateKey();
+      if (!privKey) {
+        alert('No private key. Generate a key pair first.');
+        throw new Error('Missing private key');
+      }
+      const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: { name: 'SHA-256' } }, privKey, enc.encode(data));
+      return bytesToBase64(new Uint8Array(signature));
+    }
+
+    async function verifyData(data, sigB64, pubKeyText) {
+      const pubKey = await crypto.subtle.importKey('jwk', JSON.parse(pubKeyText), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      const signature = base64ToBytes(sigB64);
+      return crypto.subtle.verify({ name: 'ECDSA', hash: { name: 'SHA-256' } }, pubKey, signature, enc.encode(data));
+    }
     
     function adjustView() {
       const action = document.getElementById('action').value;
@@ -178,6 +240,7 @@
       document.getElementById('textFileGroup').classList.toggle('hidden', action !== 'decryptFile');
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
+      document.getElementById('pubKeyGroup').classList.toggle('hidden', !(action.startsWith('decrypt')));
 
       // Toggle buttons based on action for UI clarity:
       if (action === 'encryptImage') {
@@ -232,11 +295,11 @@
     }
     
     document.addEventListener('DOMContentLoaded', () => { 
-      // Global TextEncoder instance available to all handlers
-      const enc = new TextEncoder();
-      
       adjustView();
       checkStrength();
+
+      document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
+      document.getElementById('exportPubKey').addEventListener('click', exportPublicKey);
       
       // Check for code in URL hash and set decryption view if present
       const code = window.location.hash.substring(1);
@@ -275,17 +338,19 @@
             combined.set(iv, salt.length);
             combined.set(ctArray, salt.length + iv.length);
             const output = bytesToBase64(combined);
-            
-            if (output.length > MAX_OUTPUT_LENGTH) {
-              resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
-              const blob = new Blob([output], { type: 'text/plain' });
+            const signature = await signData(output);
+            const signedOutput = signature + '.' + output;
+
+            if (signedOutput.length > MAX_OUTPUT_LENGTH) {
+              resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${signedOutput}\n\nDownloading as text file...`;
+              const blob = new Blob([signedOutput], { type: 'text/plain' });
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = 'encrypted-output.txt';
               link.click();
             } else {
-              resultDiv.textContent = `Encrypted Code:\n\n${output}`;
-              QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+              resultDiv.textContent = `Encrypted Code:\n\n${signedOutput}`;
+              QRCode.toCanvas(document.createElement('canvas'), signedOutput, (err, canvas) => {
                 if (!err) {
                   qrCodeDiv.appendChild(canvas);
                   const link = document.createElement('a');
@@ -296,8 +361,13 @@
               });
             }
           } else if (action === 'decrypt') {
-            const message = document.getElementById('message').value; 
-            const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
+            const message = document.getElementById('message').value;
+            const [sigB64, cipherB64] = message.split('.', 2);
+            if (!sigB64 || !cipherB64) throw new Error('Invalid signed message format.');
+            const pubText = document.getElementById('senderPubKey').value.trim();
+            if (!pubText) throw new Error('Sender public key required.');
+            const valid = await verifyData(cipherB64, sigB64, pubText);
+            const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
             const salt = data.slice(0, 16);
             const iv = data.slice(16, 28);
             const ciphertext = data.slice(28);
@@ -319,9 +389,9 @@
               link.href = URL.createObjectURL(blob);
               link.download = 'decrypted-file';
               link.click();
-              resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
+              resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
             } else {
-              resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+              resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
             }
           } else if (action === 'decryptFile') {
             const fileInput = document.getElementById('fileInput');
@@ -329,8 +399,12 @@
             const reader = new FileReader();
             reader.onload = async function () {
               const fileContent = reader.result.trim();
+              const [sigB64, cipherB64] = fileContent.split('.', 2);
               try {
-                const data = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
+                const pubText = document.getElementById('senderPubKey').value.trim();
+                if (!pubText) throw new Error('Sender public key required.');
+                const valid = await verifyData(cipherB64, sigB64, pubText);
+                const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
                 const salt = data.slice(0, 16);
                 const iv = data.slice(16, 28);
                 const ciphertext = data.slice(28);
@@ -352,9 +426,9 @@
                   link.href = URL.createObjectURL(blob);
                   link.download = 'decrypted-file';
                   link.click();
-                  resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
+                  resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
                 } else {
-                  resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+                  resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
                 }
               } catch (err) {
                 resultDiv.textContent = 'Error: ' + err.message;
@@ -410,18 +484,20 @@
       combined.set(iv, salt.length);
       combined.set(ctArray, salt.length + iv.length);
       const output = bytesToBase64(combined);
-      
-      if (output.length > 1000) {
-        resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
-        const blob = new Blob([output], { type: 'text/plain' });
+      const signature = await signData(output);
+      const signedOutput = signature + '.' + output;
+
+      if (signedOutput.length > 1000) {
+        resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${signedOutput}\n\nDownloading as text file...`;
+        const blob = new Blob([signedOutput], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = 'encrypted-output.txt';
         link.click();
       } else {
-        resultDiv.textContent = `Encrypted Code:\n\n${output}`;
+        resultDiv.textContent = `Encrypted Code:\n\n${signedOutput}`;
         qrCodeDiv.innerHTML = '';
-        QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
+        QRCode.toCanvas(document.createElement('canvas'), signedOutput, (err, canvas) => {
           if (!err) {
             qrCodeDiv.appendChild(canvas);
             const link = document.createElement('a');
@@ -458,7 +534,12 @@
             if (!code) return alert('QR code could not be read.');
     
             try {
-              const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
+              const [sigB64, cipherB64] = code.data.split('.', 2);
+              if (!sigB64 || !cipherB64) throw new Error('Invalid signed message format.');
+              const pubText = document.getElementById('senderPubKey').value.trim();
+              if (!pubText) throw new Error('Sender public key required.');
+              const valid = await verifyData(cipherB64, sigB64, pubText);
+              const data = Uint8Array.from(atob(cipherB64), c => c.charCodeAt(0));
               const salt = data.slice(0, 16);
               const iv = data.slice(16, 28);
               const ciphertext = data.slice(28);
@@ -480,9 +561,9 @@
                 link.href = URL.createObjectURL(blob);
                 link.download = 'decrypted-file';
                 link.click();
-                resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
+                resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\nDecrypted File (${mime}) downloaded.`;
               } else {
-                resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
+                resultDiv.textContent = `Signature ${valid ? 'Valid' : 'Invalid'}\n\nDecrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
               }
             } catch (err) {
               resultDiv.textContent = 'Error: ' + err.message;
