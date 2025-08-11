@@ -44,8 +44,8 @@ No logs. No identities. No dependencies.
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
-4. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
-5. Click the corresponding action button:
+5. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
+6. Click the corresponding action button:
    - **Run** for text encryption/decryption
    - **Encrypt Image** for image encryption
    - **Decode QR** for QR code decryption
