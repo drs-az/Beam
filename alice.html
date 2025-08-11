@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Alice's Decryption Wonderland</title>
+  <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <style>
     /* Alice in Wonderland themed styling */
     body {
@@ -78,8 +79,9 @@
     <label for="encryptedCode">Encrypted Code:</label>
     <textarea id="encryptedCode" rows="6" placeholder="Paste your enchanted encrypted code here..."></textarea>
     <label for="passphrase">Passphrase:</label>
-    <input type="password" id="passphrase" placeholder="Enter your secret passphrase">
-    <button id="runButton">Run</button>
+    <input type="password" id="passphrase" oninput="checkStrength()" placeholder="Enter your secret passphrase">
+    <div id="strength"></div>
+    <button id="runButton" disabled>Run</button>
     <div id="output" class="output"></div>
   </div>
 
@@ -133,6 +135,18 @@
       }
     }
 
+    function checkStrength() {
+      const input = document.getElementById('passphrase').value;
+      const result = zxcvbn(input);
+      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
+      document.getElementById('runButton').disabled = result.score < 3;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      checkStrength();
+    });
+
     // Event listener for the Run button
     document.getElementById('runButton').addEventListener('click', async () => {
       const encryptedCode = document.getElementById('encryptedCode').value.trim();
@@ -145,6 +159,12 @@
 
       if (!encryptedCode || !passphrase) {
         outputDiv.textContent = "Please provide both the encrypted code and the passphrase.";
+        outputDiv.classList.add("error");
+        return;
+      }
+
+      if (zxcvbn(passphrase).score < 3) {
+        outputDiv.textContent = "Passphrase is too weak.";
         outputDiv.classList.add("error");
         return;
       }
