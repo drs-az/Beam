@@ -1,6 +1,6 @@
-# 🔐 HexaShift (PWA)
+# Beam
 
-**HexaShift** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, HexaShift works entirely offline.
+**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, HexaShift works entirely offline.
 
 ## 🛡️ Privacy-First Philosophy
 
@@ -25,7 +25,7 @@ No logs. No identities. No dependencies.
 - Upload and decode QR codes for decryption
 - Handles large inputs with chunked base64 conversion
 - Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
-- Optionally sign and verify messages with ECDSA digital signatures
+- Sign and verify messages with ECDSA digital signatures
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
 - Mobile-first responsive layout
