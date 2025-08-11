@@ -105,6 +105,16 @@
 <body>
   <div class="container">
     <h1><img src="img/beam.png" style="width: 75%; height: 75%"></h1>
+    <details>
+      <summary><strong>Instructions</strong></summary>
+      <ol>
+        <li>Optional: click <strong>Generate Key Pair</strong> and share your public key.</li>
+        <li>Exchange session keys with your peer and press <strong>Initialize Session</strong>.</li>
+        <li>Select an action from the dropdown below.</li>
+        <li>Enter your message or upload a file/QR and choose the matching button.</li>
+        <li>Copy or share the result, save contacts for later, or reset to start over.</li>
+      </ol>
+    </details>
     <label for="action">Select Action:</label>
     <select id="action" onchange="adjustView()">
       <option value="encryptText">Encrypt Text</option>
