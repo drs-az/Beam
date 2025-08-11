@@ -158,6 +158,19 @@
   
   <script>
     const MAX_OUTPUT_LENGTH = 1000;
+
+    // Convert a Uint8Array to a base64 string without using the spread operator.
+    // Builds the binary string in manageable chunks to avoid stack overflows.
+    function bytesToBase64(bytes) {
+      const chunkSize = 8192; // 8kB per chunk
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        // Using apply on small chunks avoids excessive argument lists
+        binary += String.fromCharCode.apply(null, chunk);
+      }
+      return btoa(binary);
+    }
     
     function adjustView() {
       const action = document.getElementById('action').value;
@@ -256,8 +269,12 @@
               ["encrypt", "decrypt"]
             );
             const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
-            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-            const output = btoa(String.fromCharCode(...combined));
+            const ctArray = new Uint8Array(ciphertext);
+            const combined = new Uint8Array(salt.length + iv.length + ctArray.length);
+            combined.set(salt, 0);
+            combined.set(iv, salt.length);
+            combined.set(ctArray, salt.length + iv.length);
+            const output = bytesToBase64(combined);
             
             if (output.length > MAX_OUTPUT_LENGTH) {
               resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
@@ -387,8 +404,12 @@
         ["encrypt"]
       );
       const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
-      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
-      const output = btoa(String.fromCharCode(...combined));
+      const ctArray = new Uint8Array(ciphertext);
+      const combined = new Uint8Array(salt.length + iv.length + ctArray.length);
+      combined.set(salt, 0);
+      combined.set(iv, salt.length);
+      combined.set(ctArray, salt.length + iv.length);
+      const output = bytesToBase64(combined);
       
       if (output.length > 1000) {
         resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
