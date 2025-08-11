@@ -516,7 +516,7 @@
         const resultDiv = document.getElementById('result');
         const qrCodeDiv = document.getElementById('qrcode');
         qrCodeDiv.innerHTML = '';
-        if (!window.session || !session.sendChainKey) return alert('Initialize the session first.');
+        if (!window.session || !session.CKs) return alert('Initialize the session first.');
     
         try {
           if (action === 'encryptText') {
@@ -615,7 +615,7 @@
       return;
     }
 
-    if (!window.session || !session.sendChainKey) return alert('Initialize the session first.');
+    if (!window.session || !session.CKs) return alert('Initialize the session first.');
 
     const reader = new FileReader();
     reader.onload = async function () {
@@ -660,7 +660,7 @@
         const fileInput = document.getElementById('qrInput');
         const resultDiv = document.getElementById('result');
         if (!fileInput.files[0]) return alert('Please upload a QR code image.');
-        if (!window.session || !session.sendChainKey) return alert('Initialize the session first.');
+        if (!window.session || !session.CKs) return alert('Initialize the session first.');
 
         const reader = new FileReader();
         reader.onload = async function () {
