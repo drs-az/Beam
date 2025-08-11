@@ -37,21 +37,21 @@ No logs. No identities. No dependencies.
 ## 🚀 How to Use
 
 1. Open `index.html` in a browser (mobile or desktop).
-2. *(Optional)* Click **Generate Key Pair** to create an ECDSA key pair for signing. Use **Export Public Key** to share your public key with others.
-3. Share your session key with your peer and paste theirs to initialize the ratchet.
-4. Select one of the actions from the dropdown:
+2. *(Optional)* Click **Generate Key Pair** to create an ECDSA key pair for signing, then use **Export Public Key** to share it with peers.
+3. Exchange session keys with your partner and click **Initialize Session** to start a ratchet.
+4. For signature verification, paste the sender's public key or choose a saved contact. Use **Save Contact** to store keys with names and avatars for future sessions.
+5. Select one of the actions from the dropdown:
    - **Encrypt Text**
    - **Decrypt Text**
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
-5. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
-6. Click the corresponding action button:
+6. Provide the message or upload a file/QR image and click the matching button:
    - **Run** for text encryption/decryption
    - **Encrypt Image** for image encryption
    - **Decode QR** for QR code decryption
-7. Review the result: copy the output, download the QR code, or share via the generated link.
-8. Use the **Reset** button to clear the form and start over.
+7. Review the result: copy it, download the QR code, or use **📤 Share Encrypted Link**. Large outputs automatically download as a text file.
+8. Use **Reset** to clear the form. **Copy Result** copies the output to your clipboard.
 
 ## 🖼️ File and Image Encryption
 
