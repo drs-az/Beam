@@ -27,6 +27,7 @@ No logs. No identities. No dependencies.
 - Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
 - Sign and verify messages with ECDSA digital signatures
 - Generate and export ECDSA key pairs for signing and verification
+- Experimental `RatchetSession` for ephemeral ECDH exchange with per-message HKDF key ratchet
 - Public key address book to save and reuse sender keys with custom names and images
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
@@ -69,12 +70,16 @@ No logs. No identities. No dependencies.
 When encrypting text or files, you can generate a shareable link that stores data
 in the URL hash fragment. Anyone with this link and the correct passphrase can decrypt the message, and using the hash helps prevent leakage via HTTP Referer headers.
 
+## 🔄 Ephemeral Sessions (Experimental)
+
+`ratchet.js` contains a small `RatchetSession` helper showing how two parties can exchange an ephemeral ECDH key pair and then derive a fresh symmetric key for every message via HKDF. This provides lightweight forward secrecy without repeating the key exchange.
+
 ## ⚠️ Security & Connectivity Notes
 
 - All encryption is performed **client-side** — your passphrase is never stored or transmitted.
 - **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
 - Choose a strong, unique passphrase to maximize security.
-- The app provides optional digital signatures for authenticity but **does not support forward secrecy**.
+- The primary interface uses passphrases and does not provide forward secrecy; the optional ratchet helper adds it per message.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
