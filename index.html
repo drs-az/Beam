@@ -225,9 +225,8 @@
       adjustView();
       checkStrength();
       
-      // Check for 'code' query parameter and set decryption view if present
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
+      // Check for code in URL hash and set decryption view if present
+      const code = window.location.hash.substring(1);
       if (code) {
         document.getElementById('action').value = 'decrypt';
         document.getElementById('message').value = code;
@@ -492,7 +491,7 @@
         }
     
         const url = new URL(window.location.href);
-        url.searchParams.set('code', cleaned);
+        url.hash = cleaned;
     
         const shareData = {
           title: 'Encrypted Message',
