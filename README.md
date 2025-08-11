@@ -1,6 +1,6 @@
 # Beam
 
-**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, Beam works entirely offline.
+**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption with per-session forward secrecy — with **no servers**, **no accounts**, and **no data collection**. Once loaded, Beam works entirely offline.
 
 ## 🛡️ Privacy-First Philosophy
 
@@ -16,8 +16,7 @@ No logs. No identities. No dependencies.
 ## ✨ Features
 
 - **AES-256-GCM** encryption via the WebCrypto API
-- **PBKDF2** key derivation (150k iterations, SHA-256)
-- Custom passphrase input with a strength meter powered by **zxcvbn** (score ≥3 enforced)
+- Ephemeral ECDH session with per-message HKDF ratchet providing forward secrecy
 - Encrypt and decrypt text, images, and encrypted text files
 - **Image Encryption** with MIME type preservation and auto-download of decrypted files
   _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
@@ -34,25 +33,19 @@ No logs. No identities. No dependencies.
 - Mobile-first responsive layout
 - Fully offline, installable PWA experience on Android and desktop
 
-## 🔐 Passphrase Guidelines
-
-- Passphrases must be at least 6 characters long.
-- The app enforces a minimum zxcvbn strength score of **3** before enabling any actions.
-- Choose a strong, unique passphrase to maximize security.
-
 ## 🚀 How to Use
 
 1. Open `index.html` in a browser (mobile or desktop).
 2. *(Optional)* Click **Generate Key Pair** to create an ECDSA key pair for signing. Use **Export Public Key** to share your public key with others.
-3. Select one of the actions from the dropdown:
+3. Share your session key with your peer and paste theirs to initialize the ratchet.
+4. Select one of the actions from the dropdown:
    - **Encrypt Text**
    - **Decrypt Text**
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
 4. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
-5. Enter your passphrase.
-6. Click the corresponding action button:
+5. Click the corresponding action button:
    - **Run** for text encryption/decryption
    - **Encrypt Image** for image encryption
    - **Decode QR** for QR code decryption
@@ -68,7 +61,11 @@ No logs. No identities. No dependencies.
 ## 🔗 URL-Based Sharing
 
 When encrypting text or files, you can generate a shareable link that stores data
-in the URL hash fragment. Anyone with this link and the correct passphrase can decrypt the message, and using the hash helps prevent leakage via HTTP Referer headers.
+in the URL hash fragment. Anyone with this link and the session state can decrypt the message, and using the hash helps prevent leakage via HTTP Referer headers.
+
+## 🔄 Ephemeral Sessions
+
+`ratchet.js` powers the default `RatchetSession` implementation used throughout the app. Two parties exchange an ephemeral ECDH key pair and then derive a fresh symmetric key for every message via HKDF, providing lightweight forward secrecy without repeating the key exchange.
 
 ## 🔄 Ephemeral Sessions (Experimental)
 
@@ -76,10 +73,9 @@ in the URL hash fragment. Anyone with this link and the correct passphrase can d
 
 ## ⚠️ Security & Connectivity Notes
 
-- All encryption is performed **client-side** — your passphrase is never stored or transmitted.
+- All encryption is performed **client-side** — session secrets are never stored or transmitted.
 - **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
-- Choose a strong, unique passphrase to maximize security.
-- The primary interface uses passphrases and does not provide forward secrecy; the optional ratchet helper adds it per message.
+- Designed for forward secrecy by default using an ephemeral ratchet session.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
