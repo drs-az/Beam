@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Beam - Own your encryption. Share nothing else.</title>
-  <link rel="icon" href="https://drs-az.github.io/Beam/img/beam.png" />
+  <link rel="icon" href="img/beam.png" />
   <!-- Manifest for PWA -->
   <script>
     if (!document.querySelector('link[rel="manifest"]')) {
@@ -30,9 +30,9 @@
     }
   </script>
   <!-- Updated external library references -->
+  <script src="https://cdn.jsdelivr.net/npm/zxcvbn@4.4.2/dist/zxcvbn.js" defer></script>
   <script src="libs/qrcode.min.js" defer></script>
   <script src="libs/jsQR.js" defer></script>
-  <script src="libs/ratchet.js" defer></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -76,6 +76,10 @@
       background: #0056b3;
     }
     .hidden { display: none; }
+    #strength {
+      font-size: 0.9rem;
+      margin-top: 0.25rem;
+    }
     .tools {
       display: flex;
       flex-direction: column;
@@ -95,26 +99,11 @@
       margin-top: 1rem;
       text-align: center;
     }
-    #contactImagePreview {
-      max-width: 80px;
-      margin-top: 0.5rem;
-      border-radius: 50%;
-    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1><img src="img/beam.png" style="width: 75%; height: 75%"></h1>
-    <details>
-      <summary><strong>Instructions</strong></summary>
-      <ol>
-        <li>Optional: click <strong>Generate Key Pair</strong> and share your public key.</li>
-        <li>Exchange session keys with your peer and press <strong>Initialize Session</strong>.</li>
-        <li>Select an action from the dropdown below.</li>
-        <li>Enter your message or upload a file/QR and choose the matching button.</li>
-        <li>Copy or share the result, save contacts for later, or reset to start over.</li>
-      </ol>
-    </details>
     <label for="action">Select Action:</label>
     <select id="action" onchange="adjustView()">
       <option value="encryptText">Encrypt Text</option>
@@ -144,41 +133,17 @@
       <input type="file" id="qrInput" accept="image/*">
     </div>
     
-    <div id="sessionGroup">
-      <label>Your Session Key (share with peer):</label>
-      <textarea id="mySessionKey" rows="2" readonly></textarea>
-      <label for="peerSessionKey">Peer Session Key:</label>
-      <textarea id="peerSessionKey" rows="2" placeholder="Paste peer session key..."></textarea>
-      <button type="button" id="initSession">Initialize Session</button>
-    </div>
-
-    <div id="pubKeyGroup" class="hidden">
-      <label for="senderPubKey">Sender Public Key:</label>
-      <textarea id="senderPubKey" rows="3" placeholder="Paste sender public key for verification..."></textarea>
-      <button type="button" id="saveContactBtn">Save Contact</button>
-      <div id="saveContactForm" class="hidden">
-        <input type="text" id="contactName" placeholder="Contact Name">
-        <label for="contactImageInput">Contact Image (100KB max):</label>
-        <input type="file" id="contactImageInput" accept="image/*">
-        <button type="button" id="confirmSaveContact">Save</button>
-      </div>
-      <div id="contactSelectGroup" class="hidden">
-        <label for="contactSelect">Or choose saved contact:</label>
-        <select id="contactSelect"></select>
-        <img id="contactImagePreview" class="hidden" alt="Contact Image">
-        <button type="button" id="editContactBtn" class="hidden">Edit Contact</button>
-        <button type="button" id="deleteContactBtn" class="hidden">Delete Contact</button>
-      </div>
-    </div>
+    <label for="key">Passphrase:</label>
+    <input type="password" id="key" oninput="checkStrength()" placeholder="Enter your passphrase">
+    <button onclick="togglePasswordVisibility()">Toggle Visibility</button>
+    <div id="strength"></div>
 
     <div class="tools" style="margin-top: 10px;">
-      <button id="runButton">Run</button>
-      <button id="encryptImage">Encrypt Image</button>
-      <button id="decodeQR">Decode QR</button>
+      <button id="runButton" disabled>Run</button>
+      <button id="encryptImage" disabled>Encrypt Image</button>
+      <button id="decodeQR" disabled>Decode QR</button>
       <button onclick="resetForm()">Reset</button>
       <button onclick="copyToClipboard()">Copy Result</button>
-      <button id="generateKeys">Generate Key Pair</button>
-      <button id="exportPubKey">Export Public Key</button>
     </div>
     
     <h2>Result</h2>
@@ -187,140 +152,19 @@
     <button id="shareButton">📤 Share Encrypted Link</button>
     <p><strong>--</strong></p>
     <p>Made with ❤️ in 🌵 for the privacy-minded.</p>
-    <p><a href="https://github.com/drs-az/SSET" target="_blank" rel="noopener noreferrer">GitHub Repo</a></p>
+    <p><a href="https://github.com/drs-az/Beam" target="_blank" rel="noopener noreferrer">GitHub Repo</a></p>
     <p><strong>Own your encryption. Share nothing else.</strong></p>
   </div>
   
   <script>
     const MAX_OUTPUT_LENGTH = 1000;
-    const URL_HASH_WARNING_LENGTH = 2048; // ~2KB typical URL length limit
-    const enc = new TextEncoder();
-    const MAX_CONTACT_IMAGE_SIZE = 100 * 1024; // 100KB
-
-    // Convert a Uint8Array to a base64 string without using the spread operator.
-    // Builds the binary string in manageable chunks to avoid stack overflows.
-    function bytesToBase64(bytes) {
-      const chunkSize = 8192; // 8kB per chunk
-      let binary = '';
-      for (let i = 0; i < bytes.length; i += chunkSize) {
-        const chunk = bytes.subarray(i, i + chunkSize);
-        // Using apply on small chunks avoids excessive argument lists
-        binary += String.fromCharCode.apply(null, chunk);
-      }
-      return btoa(binary);
-    }
-
-    function base64ToBytes(b64) {
-      const binary = atob(b64);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return bytes;
-    }
-
-    const DB_NAME = 'hexaKeys';
-    const STORE_NAME = 'keys';
-    let dbPromise;
-
-    function getDB() {
-      if (!dbPromise) {
-        dbPromise = new Promise((resolve, reject) => {
-          const request = indexedDB.open(DB_NAME, 1);
-          request.onupgradeneeded = () => {
-            request.result.createObjectStore(STORE_NAME);
-          };
-          request.onsuccess = () => resolve(request.result);
-          request.onerror = () => reject(request.error);
-        });
-      }
-      return dbPromise;
-    }
-
-    async function saveKey(name, value) {
-      const db = await getDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).put(value, name);
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-      });
-    }
-
-    async function loadKey(name) {
-      const db = await getDB();
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(STORE_NAME, 'readonly');
-        const req = tx.objectStore(STORE_NAME).get(name);
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
-      });
-    }
-
-    async function getPrivateKey() {
-      return loadKey('privateKey');
-    }
-
-    async function generateKeyPair() {
-      const keys = await crypto.subtle.generateKey(
-        { name: 'ECDSA', namedCurve: 'P-256' },
-        false,
-        ['sign', 'verify']
-      );
-      const pubJwk = await crypto.subtle.exportKey('jwk', keys.publicKey);
-      await saveKey('privateKey', keys.privateKey);
-      await saveKey('publicKey', pubJwk);
-      alert('Key pair generated and stored locally.');
-    }
-
-    async function exportPublicKey() {
-      const pub = await loadKey('publicKey');
-      if (!pub) return alert('No key pair found. Generate one first.');
-      const blob = new Blob([JSON.stringify(pub)], { type: 'application/json' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = 'publicKey.json';
-      link.click();
-    }
-
-    async function signData(data) {
-      const privKey = await getPrivateKey();
-      if (!privKey) {
-        alert('No private key. Generate a key pair first.');
-        throw new Error('Missing private key');
-      }
-      const signature = await crypto.subtle.sign({ name: 'ECDSA', hash: { name: 'SHA-256' } }, privKey, enc.encode(data));
-      return bytesToBase64(new Uint8Array(signature));
-    }
-
-    async function getPublicKey() {
-      return loadKey('publicKey');
-    }
-
-    async function verifyData(data, sigB64, pubKeyText) {
-      let jwk;
-      if (pubKeyText) {
-        jwk = JSON.parse(pubKeyText);
-      } else {
-        jwk = await getPublicKey();
-        if (!jwk) throw new Error('Public key required for verification.');
-      }
-      const pubKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
-      const signature = base64ToBytes(sigB64);
-      return crypto.subtle.verify({ name: 'ECDSA', hash: { name: 'SHA-256' } }, pubKey, signature, enc.encode(data));
-    }
     
     function adjustView() {
       const action = document.getElementById('action').value;
-      const isDecrypt = action.startsWith('decrypt');
-      document.getElementById('messageGroup').classList.toggle('hidden', action !== 'encryptText' && !isDecrypt);
+      document.getElementById('messageGroup').classList.toggle('hidden', action !== 'encryptText' && action !== 'decrypt');
       document.getElementById('textFileGroup').classList.toggle('hidden', action !== 'decryptFile');
       document.getElementById('imageGroup').classList.toggle('hidden', action !== 'encryptImage');
       document.getElementById('qrGroup').classList.toggle('hidden', action !== 'decryptQR');
-      document.getElementById('pubKeyGroup').classList.toggle('hidden', !isDecrypt);
-      if (isDecrypt) {
-        updateContactDropdown();
-      }
 
       // Toggle buttons based on action for UI clarity:
       if (action === 'encryptImage') {
@@ -338,225 +182,94 @@
       }
     }
     
-    async function setupSession() {
-      window.session = await RatchetSession.create();
-      document.getElementById('mySessionKey').value = session.publicKey;
+    function togglePasswordVisibility() { 
+      const keyInput = document.getElementById('key'); 
+      keyInput.type = keyInput.type === 'password' ? 'text' : 'password'; 
     }
     
-    function copyToClipboard() {
-      const text = document.getElementById('result').textContent;
-      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim();
-      navigator.clipboard
-        .writeText(cleaned)
-        .then(() => alert('Copied!'))
-        .catch(err => alert('Copy failed: ' + err.message));
+    function checkStrength() {
+      const input = document.getElementById('key').value;
+      const result = zxcvbn(input);
+      const levels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong'];
+      document.getElementById('strength').textContent = 'Strength: ' + levels[result.score];
+      const strong = result.score >= 3;
+      document.getElementById('runButton').disabled = !strong;
+      document.getElementById('encryptImage').disabled = !strong;
+      document.getElementById('decodeQR').disabled = !strong;
     }
     
-    function resetForm() {
-      document.getElementById('action').value = 'encryptText';
-      adjustView();
-      document.getElementById('message').value = '';
+    function copyToClipboard() { 
+      const text = document.getElementById('result').textContent; 
+      const cleaned = text.replace(/^Encrypted Code:\n?|^Decrypted Message:\n?/, '').trim(); 
+      navigator.clipboard.writeText(cleaned).then(() => alert('Copied!')); 
+    }
+    
+    function resetForm() { 
+      document.getElementById('action').value = 'encryptText'; 
+      adjustView(); 
+      document.getElementById('message').value = ''; 
       document.getElementById('fileInput').value = '';
       document.getElementById('imageInput').value = '';
       document.getElementById('qrInput').value = '';
-      document.getElementById('peerSessionKey').value = '';
-      document.getElementById('senderPubKey').value = '';
+      document.getElementById('key').value = '';
       document.getElementById('result').textContent = '';
+      document.getElementById('strength').textContent = '';
       document.getElementById('qrcode').innerHTML = '';
-      const select = document.getElementById('contactSelect');
-      if (select) select.selectedIndex = 0;
-      const imgPrev = document.getElementById('contactImagePreview');
-      if (imgPrev) imgPrev.classList.add('hidden');
-      const editBtn = document.getElementById('editContactBtn');
-      if (editBtn) editBtn.classList.add('hidden');
-      const delBtn = document.getElementById('deleteContactBtn');
-      if (delBtn) delBtn.classList.add('hidden');
-      setupSession();
-    }
-
-    let contacts = [];
-    let editingIndex = null;
-    function updateContactDropdown() {
-      const selectGroup = document.getElementById('contactSelectGroup');
-      const select = document.getElementById('contactSelect');
-      select.innerHTML = '';
-      const imgPrev = document.getElementById('contactImagePreview');
-      if (imgPrev) imgPrev.classList.add('hidden');
-      const editBtn = document.getElementById('editContactBtn');
-      if (editBtn) editBtn.classList.add('hidden');
-      const delBtn = document.getElementById('deleteContactBtn');
-      if (delBtn) delBtn.classList.add('hidden');
-      if (!contacts.length) {
-        const opt = document.createElement('option');
-        opt.value = '';
-        opt.textContent = 'No saved contacts';
-        select.appendChild(opt);
-        select.disabled = true;
-      } else {
-        select.disabled = false;
-        select.innerHTML = '<option value="">Select a contact...</option>';
-        contacts.forEach((c, idx) => {
-          const opt = document.createElement('option');
-          opt.value = idx;
-          opt.textContent = c.name;
-          select.appendChild(opt);
-        });
-      }
-      selectGroup.classList.remove('hidden');
+      checkStrength();
     }
     
-    document.addEventListener('DOMContentLoaded', () => {
-      adjustView();
-      setupSession();
-      const copyBtn = document.querySelector("button[onclick='copyToClipboard()']");
-      if (!navigator.clipboard && copyBtn) {
-        copyBtn.disabled = true;
-        copyBtn.title = 'Clipboard API unavailable';
-      }
-      document.getElementById('initSession').addEventListener('click', async () => {
-        const peer = document.getElementById('peerSessionKey').value.trim();
-        if (!peer) return alert('Enter peer session key.');
-        await session.init(peer, true);
-        alert('Session initialized!');
-      });
-
-      try {
-        contacts = JSON.parse(localStorage.getItem('contacts') || '[]');
-      } catch (e) {
-        contacts = [];
-        localStorage.removeItem('contacts');
-      }
-      updateContactDropdown();
-      document.getElementById('saveContactBtn').addEventListener('click', () => {
-        editingIndex = null;
-        document.getElementById('contactName').value = '';
-        document.getElementById('contactImageInput').value = '';
-        delete document.getElementById('contactImageInput').dataset.image;
-        document.getElementById('saveContactForm').classList.toggle('hidden');
-      });
-      document.getElementById('confirmSaveContact').addEventListener('click', () => {
-        const name = document.getElementById('contactName').value.trim();
-        const pubKey = document.getElementById('senderPubKey').value.trim();
-        const fileInput = document.getElementById('contactImageInput');
-        const file = fileInput.files[0];
-        if (!name || !pubKey || (editingIndex === null && !file)) return alert('Please provide name, public key, and image.');
-        if (file && file.size > MAX_CONTACT_IMAGE_SIZE) return alert('Image must be 100KB or less.');
-
-        const resultDiv = document.getElementById('result');
-
-        const saveContact = (image) => {
-          if (editingIndex !== null) {
-            contacts[editingIndex] = { name, pubKey, image };
-          } else {
-            contacts.push({ name, pubKey, image });
-          }
-          localStorage.setItem('contacts', JSON.stringify(contacts));
-          updateContactDropdown();
-          document.getElementById('saveContactForm').classList.add('hidden');
-          document.getElementById('contactName').value = '';
-          fileInput.value = '';
-          delete fileInput.dataset.image;
-          editingIndex = null;
-        };
-
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = () => saveContact(reader.result);
-          reader.onerror = () => {
-            resultDiv.textContent = 'Error reading file: ' + reader.error.message;
-            fileInput.value = '';
-            delete fileInput.dataset.image;
-          };
-          reader.readAsDataURL(file);
-        } else {
-          saveContact(fileInput.dataset.image);
-        }
-      });
-      document.getElementById('contactSelect').addEventListener('change', (e) => {
-        const idx = e.target.value;
-        const img = document.getElementById('contactImagePreview');
-        const editBtn = document.getElementById('editContactBtn');
-        const delBtn = document.getElementById('deleteContactBtn');
-        if (idx === '') {
-          img.classList.add('hidden');
-          editBtn.classList.add('hidden');
-          delBtn.classList.add('hidden');
-          return;
-        }
-        const contact = contacts[idx];
-        document.getElementById('senderPubKey').value = contact.pubKey;
-        img.src = contact.image;
-        img.classList.remove('hidden');
-        editBtn.classList.remove('hidden');
-        delBtn.classList.remove('hidden');
-      });
-      document.getElementById('editContactBtn').addEventListener('click', () => {
-        const select = document.getElementById('contactSelect');
-        const idx = select.value;
-        if (idx === '') return;
-        editingIndex = idx;
-        const contact = contacts[idx];
-        document.getElementById('contactName').value = contact.name;
-        document.getElementById('senderPubKey').value = contact.pubKey;
-        const fileInput = document.getElementById('contactImageInput');
-        fileInput.value = '';
-        fileInput.dataset.image = contact.image;
-        const imgPrev = document.getElementById('contactImagePreview');
-        imgPrev.src = contact.image;
-        imgPrev.classList.remove('hidden');
-        document.getElementById('saveContactForm').classList.remove('hidden');
-      });
-      document.getElementById('deleteContactBtn').addEventListener('click', () => {
-        const select = document.getElementById('contactSelect');
-        const idx = select.value;
-        if (idx === '') return;
-        contacts.splice(idx, 1);
-        localStorage.setItem('contacts', JSON.stringify(contacts));
-        updateContactDropdown();
-        select.selectedIndex = 0;
-        document.getElementById('senderPubKey').value = '';
-        const img = document.getElementById('contactImagePreview');
-        img.classList.add('hidden');
-        document.getElementById('editContactBtn').classList.add('hidden');
-        document.getElementById('deleteContactBtn').classList.add('hidden');
-      });
-
-      document.getElementById('generateKeys').addEventListener('click', generateKeyPair);
-      document.getElementById('exportPubKey').addEventListener('click', exportPublicKey);
+    document.addEventListener('DOMContentLoaded', () => { 
+      // Global TextEncoder instance available to all handlers
+      const enc = new TextEncoder();
       
-      // Check for code in URL hash and set decryption view if present
-      const code = decodeURIComponent(window.location.hash.substring(1));
+      adjustView();
+      checkStrength();
+      
+      // Check for 'code' query parameter and set decryption view if present
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
       if (code) {
         document.getElementById('action').value = 'decrypt';
         document.getElementById('message').value = code;
         adjustView();
       }
     
-      document.getElementById('runButton').addEventListener('click', async () => {
+      document.getElementById('runButton').addEventListener('click', async () => { 
         const action = document.getElementById('action').value;
+        const passphrase = document.getElementById('key').value.trim();
         const resultDiv = document.getElementById('result');
         const qrCodeDiv = document.getElementById('qrcode');
         qrCodeDiv.innerHTML = '';
-        if (!window.session || !session.CKs) return alert('Initialize the session first.');
+        if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+        if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
     
         try {
           if (action === 'encryptText') {
-            const message = document.getElementById('message').value;
-            const bundle = await session.encrypt(message);
-            const payload = btoa(JSON.stringify(bundle));
-            const signature = await signData(payload);
-            const signedOutput = signature + '.' + payload;
-
-            if (signedOutput.length > MAX_OUTPUT_LENGTH) {
-              resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${signedOutput}\n\nDownloading as text file...`;
-              const blob = new Blob([signedOutput], { type: 'text/plain' });
+            const message = document.getElementById('message').value; 
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+            const key = await crypto.subtle.deriveKey(
+              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+              keyMaterial,
+              { name: "AES-GCM", length: 256 },
+              false,
+              ["encrypt", "decrypt"]
+            );
+            const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, enc.encode(message));
+            const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+            const output = btoa(String.fromCharCode(...combined));
+            
+            if (output.length > MAX_OUTPUT_LENGTH) {
+              resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
+              const blob = new Blob([output], { type: 'text/plain' });
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = 'encrypted-output.txt';
               link.click();
             } else {
-              resultDiv.textContent = `Encrypted Code:\n\n${signedOutput}`;
-              QRCode.toCanvas(document.createElement('canvas'), signedOutput, (err, canvas) => {
+              resultDiv.textContent = `Encrypted Code:\n\n${output}`;
+              QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
                 if (!err) {
                   qrCodeDiv.appendChild(canvas);
                   const link = document.createElement('a');
@@ -567,38 +280,32 @@
               });
             }
           } else if (action === 'decrypt') {
-            const message = document.getElementById('message').value;
-            const [sigB64, payloadB64] = message.split('.', 2);
-            if (!sigB64 || !payloadB64) throw new Error('Invalid signed message format.');
-            const pubText = document.getElementById('senderPubKey').value.trim();
-            const valid = await verifyData(payloadB64, sigB64, pubText);
-            if (!valid) {
-              resultDiv.textContent = 'Signature invalid';
-              return;
-            }
-            const bundle = JSON.parse(atob(payloadB64));
-            let decrypted;
-            try {
-              decrypted = await session.decrypt(bundle);
-            } catch (err) {
-              if (err.message === 'Bad header MAC') {
-                resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
-                return;
-              }
-              throw err;
-            }
-            const sepIndex = decrypted.indexOf('|');
+            const message = document.getElementById('message').value; 
+            const data = Uint8Array.from(atob(message), c => c.charCodeAt(0));
+            const salt = data.slice(0, 16);
+            const iv = data.slice(16, 28);
+            const ciphertext = data.slice(28);
+            const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+            const key = await crypto.subtle.deriveKey(
+              { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+              keyMaterial,
+              { name: "AES-GCM", length: 256 },
+              false,
+              ["decrypt"]
+            );
+            const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+            const sepIndex = new Uint8Array(decrypted).indexOf(124);
             if (sepIndex !== -1) {
-              const mime = decrypted.slice(0, sepIndex);
-              const content = Uint8Array.from(atob(decrypted.slice(sepIndex + 1)), c => c.charCodeAt(0));
+              const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
+              const content = new Uint8Array(decrypted).slice(sepIndex + 1);
               const blob = new Blob([content], { type: mime });
               const link = document.createElement('a');
               link.href = URL.createObjectURL(blob);
               link.download = 'decrypted-file';
               link.click();
-              resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
+              resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
             } else {
-              resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
+              resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
             }
           } else if (action === 'decryptFile') {
             const fileInput = document.getElementById('fileInput');
@@ -606,45 +313,36 @@
             const reader = new FileReader();
             reader.onload = async function () {
               const fileContent = reader.result.trim();
-              const [sigB64, payloadB64] = fileContent.split('.', 2);
               try {
-                const pubText = document.getElementById('senderPubKey').value.trim();
-                const valid = await verifyData(payloadB64, sigB64, pubText);
-                if (!valid) {
-                  resultDiv.textContent = 'Signature invalid';
-                  return;
-                }
-                const bundle = JSON.parse(atob(payloadB64));
-                let decrypted;
-                try {
-                  decrypted = await session.decrypt(bundle);
-                } catch (err) {
-                  if (err.message === 'Bad header MAC') {
-                    resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
-                    return;
-                  }
-                  throw err;
-                }
-                const sepIndex = decrypted.indexOf('|');
+                const data = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
+                const salt = data.slice(0, 16);
+                const iv = data.slice(16, 28);
+                const ciphertext = data.slice(28);
+                const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+                const key = await crypto.subtle.deriveKey(
+                  { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+                  keyMaterial,
+                  { name: "AES-GCM", length: 256 },
+                  false,
+                  ["decrypt"]
+                );
+                const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+                const sepIndex = new Uint8Array(decrypted).indexOf(124);
                 if (sepIndex !== -1) {
-                  const mime = decrypted.slice(0, sepIndex);
-                  const content = Uint8Array.from(atob(decrypted.slice(sepIndex + 1)), c => c.charCodeAt(0));
+                  const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
+                  const content = new Uint8Array(decrypted).slice(sepIndex + 1);
                   const blob = new Blob([content], { type: mime });
                   const link = document.createElement('a');
                   link.href = URL.createObjectURL(blob);
                   link.download = 'decrypted-file';
                   link.click();
-                  resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
+                  resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
                 } else {
-                  resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
+                  resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
                 }
               } catch (err) {
                 resultDiv.textContent = 'Error: ' + err.message;
               }
-            };
-            reader.onerror = () => {
-              resultDiv.textContent = 'Error reading file: ' + reader.error.message;
-              fileInput.value = '';
             };
             reader.readAsText(fileInput.files[0]);
           }
@@ -658,6 +356,7 @@
     const fileInput = document.getElementById('imageInput');
     const resultDiv = document.getElementById('result');
     const qrCodeDiv = document.getElementById('qrcode');
+    const passphrase = document.getElementById('key').value.trim();
     if (!fileInput.files[0]) return alert('Please upload an image.');
 
     // Check if the image file size exceeds 100kb (100 * 1024 bytes)
@@ -666,8 +365,9 @@
       return;
     }
 
-    if (!window.session || !session.CKs) return alert('Initialize the session first.');
-
+    if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+    if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
+    
     const reader = new FileReader();
     reader.onload = async function () {
       const arrayBuffer = reader.result;
@@ -676,23 +376,32 @@
       const fullBuffer = new Uint8Array(prefix.length + arrayBuffer.byteLength);
       fullBuffer.set(prefix, 0);
       fullBuffer.set(new Uint8Array(arrayBuffer), prefix.length);
-
-      const bundle = await session.encrypt(bytesToBase64(fullBuffer));
-      const payload = btoa(JSON.stringify(bundle));
-      const signature = await signData(payload);
-      const signedOutput = signature + '.' + payload;
-
-      if (signedOutput.length > 1000) {
-        resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${signedOutput}\n\nDownloading as text file...`;
-        const blob = new Blob([signedOutput], { type: 'text/plain' });
+      
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const keyMaterial = await crypto.subtle.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey(
+        { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+        keyMaterial,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["encrypt"]
+      );
+      const ciphertext = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, fullBuffer);
+      const combined = new Uint8Array([...salt, ...iv, ...new Uint8Array(ciphertext)]);
+      const output = btoa(String.fromCharCode(...combined));
+      
+      if (output.length > 1000) {
+        resultDiv.textContent = `Encrypted Code (too long for QR):\n\n${output}\n\nDownloading as text file...`;
+        const blob = new Blob([output], { type: 'text/plain' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = 'encrypted-output.txt';
         link.click();
       } else {
-        resultDiv.textContent = `Encrypted Code:\n\n${signedOutput}`;
+        resultDiv.textContent = `Encrypted Code:\n\n${output}`;
         qrCodeDiv.innerHTML = '';
-        QRCode.toCanvas(document.createElement('canvas'), signedOutput, (err, canvas) => {
+        QRCode.toCanvas(document.createElement('canvas'), output, (err, canvas) => {
           if (!err) {
             qrCodeDiv.appendChild(canvas);
             const link = document.createElement('a');
@@ -703,21 +412,18 @@
         });
       }
     };
-    reader.onerror = () => {
-      resultDiv.textContent = 'Error reading file: ' + reader.error.message;
-      qrCodeDiv.innerHTML = '';
-      fileInput.value = '';
-    };
     reader.readAsArrayBuffer(fileInput.files[0]);
   });
     
       // Decode QR button handler
-      document.getElementById('decodeQR').addEventListener('click', async () => {
+      document.getElementById('decodeQR').addEventListener('click', async () => { 
         const fileInput = document.getElementById('qrInput');
+        const passphrase = document.getElementById('key').value.trim();
         const resultDiv = document.getElementById('result');
         if (!fileInput.files[0]) return alert('Please upload a QR code image.');
-        if (!window.session || !session.CKs) return alert('Initialize the session first.');
-
+        if (passphrase.length < 6) return alert('Passphrase must be at least 6 characters.');
+        if (zxcvbn(passphrase).score < 3) return alert('Passphrase is too weak.');
+    
         const reader = new FileReader();
         reader.onload = async function () {
           const img = new Image();
@@ -730,49 +436,39 @@
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const code = jsQR(imageData.data, canvas.width, canvas.height);
             if (!code) return alert('QR code could not be read.');
-
+    
             try {
-              const [sigB64, payloadB64] = code.data.split('.', 2);
-              if (!sigB64 || !payloadB64) throw new Error('Invalid signed message format.');
-              const pubText = document.getElementById('senderPubKey').value.trim();
-              const valid = await verifyData(payloadB64, sigB64, pubText);
-              if (!valid) {
-                resultDiv.textContent = 'Signature invalid';
-                return;
-              }
-              const bundle = JSON.parse(atob(payloadB64));
-              let decrypted;
-              try {
-                decrypted = await session.decrypt(bundle);
-              } catch (err) {
-                if (err.message === 'Bad header MAC') {
-                  resultDiv.textContent = 'Message integrity check failed; verify session keys or ensure the message wasn\'t modified. Consider resetting or re-initializing the session.';
-                  return;
-                }
-                throw err;
-              }
-              const sepIndex = decrypted.indexOf('|');
+              const data = Uint8Array.from(atob(code.data), c => c.charCodeAt(0));
+              const salt = data.slice(0, 16);
+              const iv = data.slice(16, 28);
+              const ciphertext = data.slice(28);
+              const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+              const key = await crypto.subtle.deriveKey(
+                { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+                keyMaterial,
+                { name: "AES-GCM", length: 256 },
+                false,
+                ["decrypt"]
+              );
+              const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+              const sepIndex = new Uint8Array(decrypted).indexOf(124);
               if (sepIndex !== -1) {
-                const mime = decrypted.slice(0, sepIndex);
-                const content = Uint8Array.from(atob(decrypted.slice(sepIndex + 1)), c => c.charCodeAt(0));
+                const mime = new TextDecoder().decode(new Uint8Array(decrypted).slice(0, sepIndex));
+                const content = new Uint8Array(decrypted).slice(sepIndex + 1);
                 const blob = new Blob([content], { type: mime });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
                 link.download = 'decrypted-file';
                 link.click();
-                resultDiv.textContent = `Signature valid\nDecrypted File (${mime}) downloaded.`;
+                resultDiv.textContent = `Decrypted File (${mime}) downloaded.`;
               } else {
-                resultDiv.textContent = `Signature valid\n\nDecrypted Message:\n\n${decrypted}`;
+                resultDiv.textContent = `Decrypted Message:\n\n${new TextDecoder().decode(decrypted)}`;
               }
             } catch (err) {
               resultDiv.textContent = 'Error: ' + err.message;
             }
           };
           img.src = reader.result;
-        };
-        reader.onerror = () => {
-          resultDiv.textContent = 'Error reading file: ' + reader.error.message;
-          fileInput.value = '';
         };
         reader.readAsDataURL(fileInput.files[0]);
       });
@@ -794,13 +490,9 @@
           downloadLink.click();
           return;
         }
-
+    
         const url = new URL(window.location.href);
-        const encodedHash = encodeURIComponent(cleaned);
-        if (encodedHash.length > URL_HASH_WARNING_LENGTH) {
-          alert('Warning: URL hash exceeds ~2KB and may not be supported by all browsers.');
-        }
-        url.hash = encodedHash;
+        url.searchParams.set('code', cleaned);
     
         const shareData = {
           title: 'Encrypted Message',

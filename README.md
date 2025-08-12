@@ -1,6 +1,6 @@
 # Beam
 
-**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption with per-session forward secrecy — with **no servers**, **no accounts**, and **no data collection**. Once loaded, Beam works entirely offline.
+**Beam** is a lightweight, offline encryption tool built for **privacy, simplicity, and control**. Designed as a standalone Progressive Web App (PWA), it enables peer-to-peer message and file encryption using high-entropy passphrases — with **no servers**, **no accounts**, and **no data collection**. Once loaded, Beam works entirely offline.
 
 ## 🛡️ Privacy-First Philosophy
 
@@ -10,48 +10,50 @@ Unlike legal-grade or enterprise tools that prioritize auditability and complian
 - **Simplicity over bureaucracy**
 - **Self-custody over cloud control**
 
-No logs. No identities. No dependencies.  
+No logs. No identities. No dependencies.
 **You** — and only you — control access to your encrypted messages and files.
 
 ## ✨ Features
 
 - **AES-256-GCM** encryption via the WebCrypto API
-- Ephemeral ECDH session with per-message HKDF ratchet providing forward secrecy
+- **PBKDF2** key derivation (150k iterations, SHA-256)
+- Custom passphrase input with a strength meter powered by **zxcvbn**
 - Encrypt and decrypt text, images, and encrypted text files
-- **Image Encryption** with MIME type preservation and auto-download of decrypted files
+- **Image Encryption** with MIME type preservation and auto-download of decrypted files  
   _Note: Only images up to 100kb are supported. Larger images will trigger an error message._
 - Generate and download a **QR code** of the encrypted message or file (when output is within length limits)
 - Upload and decode QR codes for decryption
-- Handles large inputs with chunked base64 conversion
-- Share encrypted messages via URL hash fragments (with auto-decrypt preload and reduced referer leakage)
-- Sign and verify messages with ECDSA digital signatures
-- Generate and export ECDSA key pairs for signing and verification
-- `RatchetSession` for ephemeral ECDH exchange with per-message HKDF key ratchet
-- Persistent identity key pair stored in local storage with signed prekeys for peer verification (X3DH-style)
-- Public key address book to save and reuse sender keys with custom names and images
+- Share encrypted messages via URL (with auto-decrypt preload)
 - **Reset** button to clear fields and state
 - Copy-to-clipboard functionality
 - Mobile-first responsive layout
 - Fully offline, installable PWA experience on Android and desktop
 
+## 🔐 Passphrase Guidelines
+
+You may use either:
+- Numeric sequences with commas (e.g. `4,2,5,8,3,3`)
+- Full alphanumeric passphrases (e.g. `correct horse battery staple`)
+
+> 💡 Commas are only required for numeric sequences.
+
 ## 🚀 How to Use
 
 1. Open `index.html` in a browser (mobile or desktop).
-2. *(Optional)* Click **Generate Key Pair** to create an ECDSA key pair for signing, then use **Export Public Key** to share it with peers.
-3. Exchange session keys with your partner and click **Initialize Session** to start a ratchet.
-4. For signature verification, paste the sender's public key or choose a saved contact. Use **Save Contact** to store keys with names and avatars for future sessions.
-5. Select one of the actions from the dropdown:
+2. Select one of the actions from the dropdown:
    - **Encrypt Text**
    - **Decrypt Text**
    - **Decrypt Text File**
    - **Encrypt Image**
    - **Decrypt QR**
-6. Provide the message or upload a file/QR image and click the matching button:
+3. For encryption, enter your message or upload an image (ensure the image is **100kb or smaller**); for decryption, paste the encrypted string, upload an encrypted text file, or scan/upload a QR code image.
+4. Enter your passphrase.
+5. Click the corresponding action button:
    - **Run** for text encryption/decryption
    - **Encrypt Image** for image encryption
    - **Decode QR** for QR code decryption
-7. Review the result: copy it, download the QR code, or use **📤 Share Encrypted Link**. Large outputs automatically download as a text file.
-8. Use **Reset** to clear the form. **Copy Result** copies the output to your clipboard.
+6. Review the result: copy the output, download the QR code, or share via the generated link.
+7. Use the **Reset** button to clear the form and start over.
 
 ## 🖼️ File and Image Encryption
 
@@ -61,18 +63,14 @@ No logs. No identities. No dependencies.
 
 ## 🔗 URL-Based Sharing
 
-When encrypting text or files, you can generate a shareable link that stores data
-in the URL hash fragment. Anyone with this link and the session state can decrypt the message, and using the hash helps prevent leakage via HTTP Referer headers.
-
-## 🔄 Ephemeral Sessions
-
-Beam uses `ratchet.js` as its default `RatchetSession` implementation. Two parties exchange an ephemeral ECDH key pair and derive a fresh symmetric key for every message via HKDF, providing lightweight forward secrecy without repeating the key exchange.
+When encrypting text or files, you can generate a shareable link. Anyone with this link and the correct passphrase can decrypt the message.
 
 ## ⚠️ Security & Connectivity Notes
 
-- All encryption is performed **client-side** — session secrets are never stored or transmitted.
-- **Offline Functionality:** All required libraries (`qrcode.min.js`, `jsQR.js`, `ratchet.js`) are bundled locally, so Beam runs fully offline once the page is loaded.
-- Designed for forward secrecy by default using an ephemeral ratchet session.
+- All encryption is performed **client-side** — your passphrase is never stored or transmitted.
+- **Offline Functionality:** Although the encryption operations run entirely offline once the app is loaded, an internet connection is required for the initial loading of external JavaScript libraries. A future release will host these libraries locally, eliminating this dependency.
+- Choose a strong, unique passphrase to maximize security.
+- The app **does not support forward secrecy** or digital signatures.
 - Designed for **anonymity and plausible deniability**, not for audit logs or compliance.
 
 ## 🧪 Use Cases
